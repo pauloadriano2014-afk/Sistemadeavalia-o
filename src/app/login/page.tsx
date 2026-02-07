@@ -14,10 +14,10 @@ export default function LoginPage() {
         </div>
         
         <form className="mt-8 space-y-6">
-          <div className="space-y-4 rounded-md shadow-sm">
+          <div className="space-y-4">
             <div>
-              <label htmlFor="email-address" className="sr-only">
-                Endereço de Email
+              <label htmlFor="email-address" className="block text-sm font-medium text-slate-300 mb-1">
+                E-mail
               </label>
               <input
                 id="email-address"
@@ -25,12 +25,12 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="relative block w-full rounded-md border-0 bg-slate-800 py-3 px-3 text-white ring-1 ring-inset ring-slate-700 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                placeholder="Endereço de Email"
+                className="block w-full rounded-md border border-slate-700 bg-slate-800 py-3 px-3 text-white placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                placeholder="seu@email.com"
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-1">
                 Senha
               </label>
               <input
@@ -39,24 +39,34 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="relative block w-full rounded-md border-0 bg-slate-800 py-3 px-3 text-white ring-1 ring-inset ring-slate-700 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                placeholder="Senha"
+                className="block w-full rounded-md border border-slate-700 bg-slate-800 py-3 px-3 text-white placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                placeholder="••••••••"
               />
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
+            {/* Botão de Entrar (Azul) */}
             <button
               formAction={login}
-              className="group relative flex w-full justify-center rounded-md bg-blue-600 px-3 py-3 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all"
+              className="w-full justify-center rounded-md bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all uppercase tracking-wide"
             >
               Entrar
             </button>
+
+            {/* Divisor Visual */}
+            <div className="relative flex items-center py-2">
+              <div className="flex-grow border-t border-slate-700"></div>
+              <span className="flex-shrink-0 mx-4 text-slate-500 text-xs uppercase">Ou</span>
+              <div className="flex-grow border-t border-slate-700"></div>
+            </div>
+
+            {/* Botão de Criar Conta (Verde - Para destacar bem) */}
             <button
               formAction={signup}
-              className="group relative flex w-full justify-center rounded-md bg-transparent border border-slate-600 px-3 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-all"
+              className="w-full justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all uppercase tracking-wide"
             >
-              Criar nova conta
+              Criar Nova Conta
             </button>
           </div>
         </form>

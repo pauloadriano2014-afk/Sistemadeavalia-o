@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase-server";
-import { ArrowLeft, Weight, TrendingDown, Calendar, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Weight, TrendingDown, Calendar, Image as ImageIcon, Plus, Sparkles } from "lucide-react"; // Importei Sparkles
 import Link from "next/link";
 import PhotoComparator from "@/components/PhotoComparator";
-import FeedbackForm from "@/components/FeedbackForm"; // <--- NOVO IMPORT
+import FeedbackForm from "@/components/FeedbackForm";
 
 // Correção do Next.js 15: params é uma Promise
 export default async function AlunoDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
@@ -67,9 +67,30 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
             <p className="text-slate-400 text-sm">Monitoramento de Evolução</p>
           </div>
         </div>
-        <div className="px-4 py-2 bg-slate-900 rounded-lg border border-slate-800">
-           <span className="text-xs text-slate-500 uppercase font-bold mr-2">Objetivo:</span>
-           <span className="text-blue-400 font-bold uppercase">{student.selected_goal?.replace('_', ' ') || 'Geral'}</span>
+        
+        <div className="flex flex-wrap items-center gap-4">
+             <div className="px-4 py-2 bg-slate-900 rounded-lg border border-slate-800 hidden sm:block">
+                <span className="text-xs text-slate-500 uppercase font-bold mr-2">Objetivo:</span>
+                <span className="text-blue-400 font-bold uppercase">{student.selected_goal?.replace('_', ' ') || 'Geral'}</span>
+             </div>
+
+             {/* BOTÃO COMPARAR (IA) - NOVO */}
+             <Link 
+               href={`/dashboard/alunos/${studentId}/comparativo`}
+               className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+             >
+               <Sparkles size={16} className="text-purple-400" />
+               Comparar (IA)
+             </Link>
+
+             {/* BOTÃO DE LANÇAR CHECK-IN (CONCIERGE) */}
+             <Link 
+               href={`/dashboard/alunos/${studentId}/novo-checkin`}
+               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors shadow-lg shadow-blue-900/20"
+             >
+               <Plus size={16} />
+               Lançar Check-in
+             </Link>
         </div>
       </div>
 
@@ -152,14 +173,14 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
 
                     {/* Mini Galeria (Visualização Rápida) */}
                     {checkin.photos && checkin.photos.length > 0 && (
-                       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-                         {checkin.photos.map((p: any) => (
-                           <a key={p.id} href={p.url} target="_blank" className="block w-12 h-16 relative rounded overflow-hidden border border-slate-700 hover:border-blue-500 transition-colors flex-shrink-0 cursor-zoom-in">
+                        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                          {checkin.photos.map((p: any) => (
+                            <a key={p.id} href={p.url} target="_blank" className="block w-12 h-16 relative rounded overflow-hidden border border-slate-700 hover:border-blue-500 transition-colors flex-shrink-0 cursor-zoom-in">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={p.url} alt={p.pose_label} className="w-full h-full object-cover" />
-                           </a>
-                         ))}
-                       </div>
+                            </a>
+                          ))}
+                        </div>
                     )}
 
                     {/* ÁREA DE FEEDBACK (Onde você trabalha) */}

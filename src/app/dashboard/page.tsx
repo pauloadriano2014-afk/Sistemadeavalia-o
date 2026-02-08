@@ -21,7 +21,7 @@ export default async function DashboardPage() {
 
   // 3. Buscar DADOS REAIS para o Coach
   let totalStudents = 0;
-  let pendingCheckins = 0; // Nova variável para contagem
+  let pendingCheckins = 0;
   let recentStudents: any[] = [];
 
   if (profile.role === 'coach' && profile.tenant_id) {
@@ -34,12 +34,12 @@ export default async function DashboardPage() {
     
     totalStudents = studentCount || 0;
 
-    // B. Contar Avaliações (Check-ins)
+    // B. Contar Avaliações (Check-ins não revisados)
     const { count: checkinCount } = await supabase
       .from('checkins')
       .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', profile.tenant_id);
-      // Futuramente podemos adicionar .eq('status', 'pending') aqui
+      .eq('tenant_id', profile.tenant_id)
+      .neq('status', 'reviewed'); // Só conta os pendentes
     
     pendingCheckins = checkinCount || 0;
 
@@ -61,7 +61,7 @@ export default async function DashboardPage() {
         <CoachView 
           profile={profile} 
           totalStudents={totalStudents} 
-          pendingCheckins={pendingCheckins} // Passando o dado novo
+          pendingCheckins={pendingCheckins} 
           recentStudents={recentStudents} 
         />
       ) : (
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
   );
 }
 
-// --- VIEW DO COACH (ATUALIZADA COM DADOS REAIS) ---
+// --- VIEW DO COACH ---
 function CoachView({ 
   profile, 
   totalStudents, 
@@ -91,7 +91,7 @@ function CoachView({
         <p className="text-slate-400">Visão geral do time {profile.full_name}.</p>
       </div>
 
-      {/* 1. KPIs Principais (2 COLUNAS) */}
+      {/* 1. KPIs Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* CARD 1: Atletas */}
@@ -108,7 +108,7 @@ function CoachView({
           </div>
         </div>
 
-        {/* CARD 2: Avaliações (AGORA COM NÚMERO REAL) */}
+        {/* CARD 2: Avaliações */}
         <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl relative overflow-hidden group hover:border-slate-700 transition-colors">
            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <ClipboardList size={80} />
@@ -124,6 +124,12 @@ function CoachView({
             <p className="text-slate-500 text-sm mt-4">
               {pendingCheckins > 0 ? "Existem check-ins para analisar." : "Tudo em dia por enquanto."}
             </p>
+            
+            {pendingCheckins > 0 && (
+                <Link href="/dashboard/avaliacoes" className="block mt-2 text-sm text-orange-400 hover:text-orange-300">
+                    Ver fila de avaliações &rarr;
+                </Link>
+            )}
           </div>
         </div>
 
@@ -211,8 +217,19 @@ function CoachView({
   );
 }
 
-// --- VIEW DO ALUNO (MANTER IGUAL) ---
-function StudentView({ profile }: { profile: any }) {
+// --- VIEW DO ALUNO (ATUALIZADA COM FEEDBACK) ---
+async function StudentView({ profile }: { profile: any }) {
+  const supabase = await createClient();
+  
+  // Buscar último check-in para ver se tem feedback
+  const { data: lastCheckin } = await supabase
+    .from('checkins')
+    .select('*')
+    .eq('user_id', profile.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
   return (
     <div className="space-y-8">
       {/* Cabeçalho Aluno */}
@@ -223,27 +240,33 @@ function StudentView({ profile }: { profile: any }) {
         </p>
       </div>
 
-      {/* Grid de Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-slate-400 text-sm font-medium uppercase tracking-wider">Próximo Check-in</h3>
-            <ClipboardList className="text-white" size={20} />
+      {/* FEEDBACK DO COACH (Só aparece se tiver feedback novo) */}
+      {lastCheckin?.feedback && (
+        <div className="bg-blue-900/20 border border-blue-800 rounded-xl p-6 animate-in slide-in-from-top-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-blue-600 rounded-lg text-white">
+              <ClipboardList size={20} />
+            </div>
+            <h3 className="font-bold text-white text-lg">Feedback do Coach</h3>
           </div>
-          <p className="text-3xl font-bold text-white">Hoje</p>
+          <p className="text-slate-200 text-lg leading-relaxed">
+            "{lastCheckin.feedback}"
+          </p>
+          <p className="text-xs text-blue-400 mt-4 font-bold uppercase">
+            Avaliado em {new Date().toLocaleDateString('pt-BR')}
+          </p>
         </div>
-      </div>
+      )}
 
-      {/* Botão de Ação Principal */}
-      <div className="bg-gradient-to-r from-blue-900 to-slate-900 border border-blue-800 rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      {/* Botão de Check-in */}
+      <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
         <div>
           <h3 className="text-xl font-bold text-white mb-2">Hora de atualizar o shape! 📸</h3>
           <p className="text-slate-300">Seu coach está aguardando as fotos e medidas dessa semana.</p>
         </div>
         
-        {/* LINK PARA A PÁGINA DE CHECKIN */}
         <Link href="/dashboard/checkin/novo">
-          <button className="bg-white text-blue-900 hover:bg-slate-200 px-6 py-3 rounded-lg font-bold transition-colors cursor-pointer">
+          <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg hover:scale-105">
             Enviar Check-in Agora
           </button>
         </Link>

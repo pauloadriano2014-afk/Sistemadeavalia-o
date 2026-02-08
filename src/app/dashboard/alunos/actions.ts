@@ -1,13 +1,18 @@
 "use server";
 
+// 1. IMPORT CORRETO DA BIBLIOTECA OFICIAL (Para o Admin)
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+
+// 2. IMPORT DO SEU PROJETO (Para verificar o Coach logado)
 import { createClient } from "@/lib/supabase-server";
-import { createClient as createServerClient } from "@/lib/supabase-server";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-// --- CRIAR ALUNO (JÁ EXISTIA) ---
+// --- CRIAR ALUNO ---
 export async function createStudent(formData: FormData) {
-  const supabase = await createServerClient();
+  // A. Usar o cliente do servidor para verificar quem está fazendo a requisição
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return redirect("/login");
@@ -22,18 +27,25 @@ export async function createStudent(formData: FormData) {
     throw new Error("Coach sem time definido.");
   }
 
-  // Cliente Admin para criar usuário
-  const supabaseAdmin = createClient(
+  // B. Configurar Cliente ADMIN (A Chave Mestra)
+  const supabaseAdmin = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use a chave service_role no .env
-    { auth: { autoRefreshToken: false, persistSession: false } } as any
+    process.env.SUPABASE_SERVICE_ROLE_KEY!, 
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
   );
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const fullName = formData.get("fullName") as string;
   const goal = formData.get("goal") as string;
+  const gender = formData.get("gender") as string; // <--- NOVO: Pegando o gênero
 
+  // C. Criar Usuário no Auth (Admin)
   const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password, 
@@ -41,27 +53,40 @@ export async function createStudent(formData: FormData) {
     user_metadata: { full_name: fullName }
   });
 
-  if (createError) return { error: createError.message };
-  if (!newUser.user) return { error: "Erro desconhecido." };
+  if (createError) {
+    console.error("Erro ao criar Auth:", createError);
+    return { error: createError.message };
+  }
 
-  await supabaseAdmin.from("profiles").update({
+  if (!newUser.user) return { error: "Erro desconhecido ao criar usuário." };
+
+  // D. Atualizar o Perfil
+  const { error: updateError } = await supabaseAdmin
+    .from("profiles")
+    .update({
       role: "student",
       tenant_id: coachProfile.tenant_id,
       selected_goal: goal,
-      full_name: fullName
-    }).eq("id", newUser.user.id);
+      full_name: fullName,
+      gender: gender // <--- NOVO: Salvando no banco
+    })
+    .eq("id", newUser.user.id);
+
+  if (updateError) {
+    console.error("Erro ao atualizar perfil:", updateError);
+  }
 
   revalidatePath("/dashboard/alunos");
   redirect("/dashboard/alunos");
 }
 
-// --- NOVA FUNÇÃO: SALVAR FEEDBACK ---
+// --- SALVAR FEEDBACK ---
 export async function saveFeedback(formData: FormData) {
-  const supabase = await createServerClient();
+  const supabase = await createClient();
   
   const checkinId = formData.get("checkinId") as string;
   const feedback = formData.get("feedback") as string;
-  const studentId = formData.get("studentId") as string; // Para revalidar a página certa
+  const studentId = formData.get("studentId") as string;
 
   if (!checkinId || !feedback) return;
 
@@ -69,7 +94,7 @@ export async function saveFeedback(formData: FormData) {
     .from("checkins")
     .update({
       feedback: feedback,
-      status: "reviewed" // Marca como avaliado
+      status: "reviewed"
     })
     .eq("id", checkinId);
 
@@ -78,6 +103,5 @@ export async function saveFeedback(formData: FormData) {
     return { error: "Erro ao salvar" };
   }
 
-  // Atualiza a página do aluno para mostrar o feedback na hora
   revalidatePath(`/dashboard/alunos/${studentId}`);
 }

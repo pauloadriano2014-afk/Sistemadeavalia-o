@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase-server";
 import Link from "next/link";
-import { Dumbbell, LogOut, User } from "lucide-react";
-import SignOutButton from "./SignOutButton"; // Vamos criar jajá
+import { Dumbbell, LogOut, Settings } from "lucide-react";
 
 export default async function Navbar() {
   const supabase = await createClient();
@@ -20,11 +19,20 @@ export default async function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           
-          {/* LOGO */}
+          {/* LOGO (DINÂMICA) */}
           <div className="flex items-center gap-8">
             <Link href="/dashboard" className="flex items-center gap-2 text-blue-500 font-bold text-xl hover:opacity-80 transition-opacity">
-              <Dumbbell size={24} />
-              <span>Fitness SaaS</span>
+              {profile.logo_url ? (
+                 <img 
+                    src={profile.logo_url} 
+                    alt="Logo" 
+                    className="h-8 w-auto max-w-[120px] object-contain rounded-md" 
+                 />
+              ) : (
+                 <Dumbbell size={24} />
+              )}
+              {/* Se tiver logo, pode optar por esconder o texto ou manter. Aqui mantive. */}
+              <span className={profile.logo_url ? "hidden md:inline" : ""}>Fitness SaaS</span>
             </Link>
 
             {/* MENUS DO COACH */}
@@ -36,10 +44,14 @@ export default async function Navbar() {
                 <Link href="/dashboard/avaliacoes" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
                   Avaliações
                 </Link>
+                {/* Link Novo */}
+                <Link href="/dashboard/config" className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1">
+                  <Settings size={16} /> Configurações
+                </Link>
               </div>
             )}
 
-            {/* MENUS DO ALUNO (Segurança: Aluno só vê isso) */}
+            {/* MENUS DO ALUNO (Mantido caso precise visualizar como aluno no futuro) */}
             {profile.role === 'student' && (
               <div className="hidden md:flex items-center gap-6">
                 <Link href="/dashboard" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
@@ -58,8 +70,9 @@ export default async function Navbar() {
               <p className="text-sm text-white font-medium">{profile.full_name}</p>
               <p className="text-xs text-slate-500 capitalize">{profile.role === 'coach' ? 'Treinador' : 'Atleta'}</p>
             </div>
+            
             <form action="/auth/signout" method="post">
-                <button className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" title="Sair">
+                <button className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" title="Sair do Sistema">
                     <LogOut size={20} />
                 </button>
             </form>

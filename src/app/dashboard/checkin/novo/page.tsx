@@ -10,58 +10,59 @@ export default function NovoCheckinPage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
 
-  // Função mágica de compressão
+  // --- CONFIGURAÇÃO DE COMPRESSÃO MAIS AGRESSIVA ---
   async function compressFile(file: File) {
     const options = {
-      maxSizeMB: 1,          // Máximo 1MB
-      maxWidthOrHeight: 1920, // Reduz resolução absurda de 4k pra Full HD
+      maxSizeMB: 0.3,          // Máximo 300KB (Fica levíssimo)
+      maxWidthOrHeight: 1280,  // Reduz resolução para HD (ótimo pra ver no celular)
       useWebWorker: true,
-      fileType: "image/jpeg"
+      fileType: "image/jpeg",
+      initialQuality: 0.7      // Qualidade 70% (imperceptível a olho nu)
     };
     try {
-      return await imageCompression(file, options);
+      console.log(`Comprimindo: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+      const compressedFile = await imageCompression(file, options);
+      console.log(`Resultado: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+      return compressedFile;
     } catch (error) {
-      console.log("Erro na compressão", error);
-      return file; // Se falhar, tenta enviar o original
+      console.error("Erro na compressão", error);
+      return file; // Se falhar, tenta o original
     }
   }
 
   const handleSubmit = async (formData: FormData) => {
     setLoading(true);
-    setStatus("Preparando fotos...");
+    setStatus("Otimizando imagens...");
 
     try {
-      // 1. Pegar as fotos originais
+      // 1. Pegar as fotos
       const front = formData.get("photo_front") as File;
       const back = formData.get("photo_back") as File;
       const side = formData.get("photo_side") as File;
 
-      // 2. Comprimir (se existirem)
-      if (front.size > 0) {
-        setStatus("Otimizando foto de Frente...");
+      // 2. Comprimir uma por uma
+      if (front && front.size > 0) {
         const compressed = await compressFile(front);
         formData.set("photo_front", compressed);
       }
 
-      if (back.size > 0) {
-        setStatus("Otimizando foto de Costas...");
+      if (back && back.size > 0) {
         const compressed = await compressFile(back);
         formData.set("photo_back", compressed);
       }
 
-      if (side.size > 0) {
-        setStatus("Otimizando foto de Perfil...");
+      if (side && side.size > 0) {
         const compressed = await compressFile(side);
         formData.set("photo_side", compressed);
       }
 
       // 3. Enviar
-      setStatus("Enviando para o Coach...");
+      setStatus("Enviando para o servidor...");
       await createCheckin(formData);
 
     } catch (error) {
       console.error(error);
-      alert("Erro ao processar envio. Tente fotos menores.");
+      alert("Erro ao enviar. Verifique sua conexão ou tente fotos diferentes.");
       setLoading(false);
     }
   };
@@ -108,7 +109,7 @@ export default function NovoCheckinPage() {
           </div>
         </div>
 
-        {/* Botão de Enviar Inteligente */}
+        {/* Botão */}
         <button 
           type="submit" 
           disabled={loading}
@@ -130,7 +131,6 @@ export default function NovoCheckinPage() {
   );
 }
 
-// Componente PhotoInput (Pode manter o mesmo, vou incluir aqui pra garantir que não quebre)
 function PhotoInput({ label, name }: { label: string, name: string }) {
   const [preview, setPreview] = useState<string | null>(null);
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

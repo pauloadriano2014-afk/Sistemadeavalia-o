@@ -1,142 +1,194 @@
 import { createClient } from "@/lib/supabase-server";
-import { ArrowLeft, Calendar, Weight, TrendingDown, ImageIcon } from "lucide-react";
+import { ArrowLeft, Weight, TrendingDown, Calendar, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import Image from "next/image";
+import PhotoComparator from "@/components/PhotoComparator";
+import FeedbackForm from "@/components/FeedbackForm"; // <--- NOVO IMPORT
 
-export default async function AlunoDetalhesPage({ params }: { params: { id: string } }) {
+// Correção do Next.js 15: params é uma Promise
+export default async function AlunoDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
+  
+  // 1. Desembrulhar os parâmetros (Obrigatório no Next 15)
+  const resolvedParams = await params;
+  const studentId = resolvedParams.id;
+  
   const supabase = await createClient();
-  const studentId = params.id;
 
-  // 1. Buscar Perfil do Aluno
-  const { data: student } = await supabase
+  // 2. Buscar Perfil (Com log de erro se falhar)
+  const { data: student, error: studentError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', studentId)
     .single();
 
-  if (!student) return <div>Aluno não encontrado</div>;
+  if (studentError || !student) {
+    return (
+      <div className="p-8 text-white bg-red-900/20 border border-red-900 rounded-xl">
+        <h2 className="text-xl font-bold mb-2">Aluno não encontrado</h2>
+        <p className="text-slate-300">O sistema não conseguiu carregar o perfil deste aluno.</p>
+        <Link href="/dashboard/alunos" className="mt-4 inline-block text-blue-400 hover:text-white">
+          &larr; Voltar para lista
+        </Link>
+      </div>
+    );
+  }
 
-  // 2. Buscar Histórico de Check-ins (com fotos)
-  const { data: checkins } = await supabase
+  // 3. Buscar Histórico COMPLETO
+  const { data: rawCheckins } = await supabase
     .from('checkins')
     .select('*, photos(*)')
     .eq('user_id', studentId)
     .order('created_at', { ascending: false });
 
-  // Calcular perda de peso total
-  const initialWeight = checkins?.[checkins.length - 1]?.weight || 0;
-  const currentWeight = checkins?.[0]?.weight || 0;
+  // 4. Processar URLs das fotos
+  const checkins = rawCheckins?.map(checkin => ({
+    ...checkin,
+    photos: checkin.photos?.map((photo: any) => {
+      const { data } = supabase.storage.from('checkin-photos').getPublicUrl(photo.storage_path);
+      return { ...photo, url: data.publicUrl };
+    })
+  })) || [];
+
+  // Cálculos de Resumo
+  const currentWeight = checkins[0]?.weight || 0;
+  const initialWeight = checkins[checkins.length - 1]?.weight || 0;
   const weightDiff = currentWeight - initialWeight;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+    <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in duration-500 pb-20">
       
-      {/* Cabeçalho com Voltar */}
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/alunos" className="p-2 bg-slate-900 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-white">{student.full_name}</h1>
-          <p className="text-slate-400">{student.email}</p>
+      {/* --- CABEÇALHO --- */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard/alunos" className="p-2 bg-slate-900 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+            <ArrowLeft size={20} />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-white">{student.full_name}</h1>
+            <p className="text-slate-400 text-sm">Monitoramento de Evolução</p>
+          </div>
         </div>
-        <div className="ml-auto flex gap-3">
-          <span className="px-3 py-1 bg-blue-900/30 text-blue-400 rounded-full text-sm font-bold uppercase border border-blue-800">
-            {student.selected_goal?.replace('_', ' ') || 'Geral'}
-          </span>
+        <div className="px-4 py-2 bg-slate-900 rounded-lg border border-slate-800">
+           <span className="text-xs text-slate-500 uppercase font-bold mr-2">Objetivo:</span>
+           <span className="text-blue-400 font-bold uppercase">{student.selected_goal?.replace('_', ' ') || 'Geral'}</span>
         </div>
       </div>
 
-      {/* Cards de Resumo */}
+      {/* --- CARDS DE STATUS --- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-          <p className="text-slate-400 text-sm font-bold uppercase mb-2">Peso Atual</p>
-          <div className="flex items-center gap-2">
-            <Weight className="text-white" size={24} />
-            <span className="text-3xl font-bold text-white">{currentWeight || '--'} kg</span>
-          </div>
-        </div>
+        <StatusCard 
+          label="Peso Atual" 
+          value={`${currentWeight || '--'} kg`} 
+          icon={<Weight className="text-blue-500" size={24} />} 
+        />
+        <StatusCard 
+          label="Evolução Total" 
+          value={`${weightDiff > 0 ? '+' : ''}${weightDiff.toFixed(1)} kg`} 
+          textColor={weightDiff <= 0 ? "text-emerald-500" : "text-red-500"}
+          icon={<TrendingDown className={weightDiff <= 0 ? "text-emerald-500" : "text-red-500"} size={24} />} 
+        />
+        <StatusCard 
+          label="Total de Check-ins" 
+          value={checkins.length.toString()} 
+          icon={<Calendar className="text-slate-400" size={24} />} 
+        />
+      </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-          <p className="text-slate-400 text-sm font-bold uppercase mb-2">Evolução Total</p>
-          <div className="flex items-center gap-2">
-            <TrendingDown className={weightDiff <= 0 ? "text-emerald-500" : "text-red-500"} size={24} />
-            <span className={`text-3xl font-bold ${weightDiff <= 0 ? "text-emerald-500" : "text-red-500"}`}>
-              {weightDiff > 0 ? '+' : ''}{weightDiff.toFixed(1)} kg
-            </span>
-          </div>
-        </div>
+      {/* --- O COMPARADOR VISUAL --- */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <ImageIcon size={20} className="text-blue-500"/>
+          Comparativo Visual
+        </h2>
+        <p className="text-slate-400 text-sm">Selecione duas datas para comparar a evolução lado a lado.</p>
+        
+        <PhotoComparator checkins={checkins} />
+      </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-          <p className="text-slate-400 text-sm font-bold uppercase mb-2">Check-ins</p>
-          <div className="flex items-center gap-2">
-            <Calendar className="text-blue-500" size={24} />
-            <span className="text-3xl font-bold text-white">{checkins?.length || 0}</span>
-          </div>
+      {/* --- HISTÓRICO DETALHADO (COM FEEDBACK) --- */}
+      <div className="space-y-4 pt-8 border-t border-slate-800">
+        <h2 className="text-xl font-bold text-white">Histórico Detalhado</h2>
+        
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+          <table className="w-full text-left">
+            <thead className="bg-slate-950/50 text-slate-400 text-xs uppercase">
+              <tr>
+                <th className="px-6 py-4 w-32">Data</th>
+                <th className="px-6 py-4 w-24">Peso</th>
+                <th className="px-6 py-4">Detalhes & Avaliação</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {checkins.map((checkin: any) => (
+                <tr key={checkin.id} className="hover:bg-slate-800/20 transition-colors align-top">
+                  
+                  {/* Data */}
+                  <td className="px-6 py-6 text-white font-mono whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-base">
+                        {new Date(checkin.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(checkin.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' })}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Peso */}
+                  <td className="px-6 py-6">
+                    <div className="flex items-center gap-1 text-slate-300 font-bold text-lg">
+                      {checkin.weight} <span className="text-xs text-slate-500 font-normal">kg</span>
+                    </div>
+                  </td>
+
+                  {/* Conteúdo Central (Relato + Feedback) */}
+                  <td className="px-6 py-6">
+                    {/* Relato do Aluno */}
+                    <div className="mb-4">
+                      <p className="text-xs text-slate-500 font-bold uppercase mb-1">Relato do Aluno:</p>
+                      <p className="text-slate-300 text-sm italic bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                        "{checkin.notes || 'Sem observações.'}"
+                      </p>
+                    </div>
+
+                    {/* Mini Galeria (Visualização Rápida) */}
+                    {checkin.photos && checkin.photos.length > 0 && (
+                       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                         {checkin.photos.map((p: any) => (
+                           <a key={p.id} href={p.url} target="_blank" className="block w-12 h-16 relative rounded overflow-hidden border border-slate-700 hover:border-blue-500 transition-colors flex-shrink-0 cursor-zoom-in">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={p.url} alt={p.pose_label} className="w-full h-full object-cover" />
+                           </a>
+                         ))}
+                       </div>
+                    )}
+
+                    {/* ÁREA DE FEEDBACK (Onde você trabalha) */}
+                    <FeedbackForm 
+                      checkinId={checkin.id} 
+                      studentId={studentId} 
+                      initialFeedback={checkin.feedback} 
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Linha do Tempo de Check-ins */}
-      <h2 className="text-xl font-bold text-white mt-8">Histórico de Evolução 📸</h2>
-      
-      <div className="space-y-8">
-        {checkins && checkins.length > 0 ? checkins.map((checkin: any) => (
-          <div key={checkin.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-            
-            {/* Cabeçalho do Card */}
-            <div className="bg-slate-950/50 px-6 py-4 border-b border-slate-800 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-600 w-2 h-2 rounded-full"></div>
-                <span className="font-bold text-white">
-                  {new Date(checkin.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                </span>
-                <span className="text-slate-500">|</span>
-                <span className="text-slate-300 font-medium">{checkin.weight} kg</span>
-              </div>
-            </div>
+    </div>
+  );
+}
 
-            <div className="p-6">
-              {/* Notas do Aluno */}
-              {checkin.notes && (
-                <div className="mb-6 bg-slate-950 p-4 rounded-lg border border-slate-800/50">
-                  <p className="text-sm text-slate-500 uppercase font-bold mb-1">Relato do Aluno:</p>
-                  <p className="text-slate-300 italic">"{checkin.notes}"</p>
-                </div>
-              )}
-
-              {/* Galeria de Fotos */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {checkin.photos?.map((photo: any) => {
-                  // Constrói a URL pública da foto
-                  const { data: { publicUrl } } = supabase.storage
-                    .from('checkin-photos')
-                    .getPublicUrl(photo.storage_path);
-
-                  return (
-                    <div key={photo.id} className="space-y-2">
-                      <div className="aspect-[3/4] relative bg-slate-950 rounded-lg overflow-hidden border border-slate-800 group">
-                        <Image 
-                          src={publicUrl} 
-                          alt={photo.pose_label} 
-                          fill 
-                          className="object-cover transition-transform group-hover:scale-105"
-                        />
-                      </div>
-                      <p className="text-center text-xs text-slate-500 uppercase font-bold">{photo.pose_label}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-          </div>
-        )) : (
-          <div className="text-center py-12 border-2 border-dashed border-slate-800 rounded-xl">
-            <ImageIcon className="mx-auto text-slate-600 mb-4" size={48} />
-            <p className="text-slate-400">Nenhum check-in enviado ainda.</p>
-          </div>
-        )}
+function StatusCard({ label, value, icon, textColor = "text-white" }: any) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl flex items-center justify-between">
+      <div>
+        <p className="text-slate-500 text-xs font-bold uppercase mb-1">{label}</p>
+        <p className={`text-2xl font-bold ${textColor}`}>{value}</p>
+      </div>
+      <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
+        {icon}
       </div>
     </div>
   );

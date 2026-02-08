@@ -1,52 +1,47 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
+import { redirect } from "next/navigation";
 
 export async function login(formData: FormData) {
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  
   const supabase = await createClient();
 
-  const data = {
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
-  };
-
-  const { error } = await supabase.auth.signInWithPassword(data);
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error) {
-    console.error("ERRO NO LOGIN:", error.message); // <--- Vai aparecer no seu terminal
-    return redirect("/login?error=Credenciais inválidas");
+    console.error("ERRO NO LOGIN:", error.message);
+    return redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePath("/", "layout");
-  redirect("/dashboard");
+  return redirect("/dashboard");
 }
 
 export async function signup(formData: FormData) {
-  const supabase = await createClient();
-  
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const fullName = formData.get("fullName") as string;
 
-  // Log para garantir que os dados estão chegando (não mostraremos senha)
-  console.log("Tentando criar conta para:", email);
+  const supabase = await createClient();
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
-        full_name: email.split('@')[0], // Usa parte do email como nome provisório
-      }
-    }
+        full_name: fullName,
+      },
+    },
   });
 
   if (error) {
-    console.error("ERRO NO SIGNUP:", error.message, error); // <--- O GRANDE CULPADO VAI APARECER AQUI
     return redirect("/login?error=Erro ao criar conta");
   }
 
-  revalidatePath("/", "layout");
-  redirect("/dashboard");
+  return redirect("/dashboard");
 }

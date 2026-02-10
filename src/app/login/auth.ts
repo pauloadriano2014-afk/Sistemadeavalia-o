@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 
-// Função 1: Login
 export async function login(formData: FormData) {
   const supabase = await createClient();
   const email = formData.get("email") as string;
@@ -23,7 +22,6 @@ export async function login(formData: FormData) {
   redirect("/dashboard");
 }
 
-// Função 2: Signup (A que estava faltando)
 export async function signup(formData: FormData) {
   const supabase = await createClient();
   

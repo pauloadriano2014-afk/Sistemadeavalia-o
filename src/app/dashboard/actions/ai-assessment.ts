@@ -6,7 +6,8 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 
 export async function generateInitialAssessment(images: { label: string, base64: string }[], context: any) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // CORREÇÃO: Usando o modelo FLASH (Rápido, aceita imagens e funciona no Render)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     // Prepara as imagens para o Gemini
     const imageParts = images.map(img => ({
@@ -56,7 +57,7 @@ export async function generateInitialAssessment(images: { label: string, base64:
     return { text: response.text() };
 
   } catch (error: any) {
-    console.error("Erro na IA:", error);
-    return { error: "Falha ao gerar análise. Verifique as fotos e tente novamente." };
+    console.error("Erro na IA:", error); // Isso vai mostrar o erro real no terminal do Render se der falha
+    return { error: `Erro na IA: ${error.message}` }; // Mostra o erro na tela pra gente saber o que foi
   }
 }

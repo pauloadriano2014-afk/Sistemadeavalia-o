@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css"; 
 import Navbar from "@/components/Navbar"; 
-import NavbarWrapper from "@/components/NavbarWrapper"; // <--- Importe o Wrapper
+import NavbarWrapper from "@/components/NavbarWrapper"; 
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Fitness SaaS",
-  description: "Sistema de Avaliação Física",
+  description: "Sistema de Avaliação Física de Alta Performance",
 };
 
 export default function RootLayout({
@@ -18,9 +18,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={inter.className + " bg-slate-950 text-slate-200"}>
+      {/* MUDANÇA: bg-black text-white (Fim do Slate/Azul) */}
+      <body className={`${inter.className} bg-black text-white antialiased selection:bg-lime-500 selection:text-black`}>
         
-        {/* O Wrapper decide se mostra ou não o Navbar */}
         <NavbarWrapper>
             <Navbar />
         </NavbarWrapper>

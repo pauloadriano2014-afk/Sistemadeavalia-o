@@ -15,50 +15,39 @@ export default async function Navbar() {
   if (!profile) return null;
 
   return (
-    <nav className="border-b border-slate-800 bg-slate-950/50 backdrop-blur-md sticky top-0 z-50">
+    <nav className="border-b border-zinc-900 bg-black/90 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+        <div className="flex justify-between h-20 items-center"> {/* Aumentei altura da barra */}
           
-          {/* LOGO (DINÂMICA) */}
+          {/* LOGO */}
           <div className="flex items-center gap-8">
-            <Link href="/dashboard" className="flex items-center gap-2 text-blue-500 font-bold text-xl hover:opacity-80 transition-opacity">
+            <Link href="/dashboard" className="flex items-center gap-3 text-lime-500 font-black text-2xl tracking-tighter hover:opacity-80 transition-opacity italic group">
               {profile.logo_url ? (
+                 /* eslint-disable-next-line @next/next/no-img-element */
                  <img 
                     src={profile.logo_url} 
                     alt="Logo" 
-                    className="h-8 w-auto max-w-[120px] object-contain rounded-md" 
+                    // LOGO MAIOR AQUI: h-10 no mobile, h-14 no desktop
+                    className="h-10 md:h-14 w-auto max-w-[150px] object-contain rounded-md transition-transform group-hover:scale-105" 
                  />
               ) : (
-                 <Dumbbell size={24} />
+                 <Dumbbell size={32} />
               )}
-              {/* Se tiver logo, pode optar por esconder o texto ou manter. Aqui mantive. */}
-              <span className={profile.logo_url ? "hidden md:inline" : ""}>Fitness SaaS</span>
+              {/* Texto só aparece se não tiver logo, ou se quiser forçar */}
+              <span className={profile.logo_url ? "hidden lg:inline" : ""}>COACH<span className="text-white">PRO</span></span>
             </Link>
 
             {/* MENUS DO COACH */}
             {profile.role === 'coach' && (
-              <div className="hidden md:flex items-center gap-6">
-                <Link href="/dashboard/alunos" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
-                  Meus Alunos
+              <div className="hidden md:flex items-center gap-8 ml-4">
+                <Link href="/dashboard/alunos" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest hover:border-b-2 hover:border-lime-500 py-1">
+                  Atletas
                 </Link>
-                <Link href="/dashboard/avaliacoes" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
+                <Link href="/dashboard/avaliacoes" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest hover:border-b-2 hover:border-lime-500 py-1">
                   Avaliações
                 </Link>
-                {/* Link Novo */}
-                <Link href="/dashboard/config" className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1">
-                  <Settings size={16} /> Configurações
-                </Link>
-              </div>
-            )}
-
-            {/* MENUS DO ALUNO (Mantido caso precise visualizar como aluno no futuro) */}
-            {profile.role === 'student' && (
-              <div className="hidden md:flex items-center gap-6">
-                <Link href="/dashboard" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
-                  Meu Painel
-                </Link>
-                <Link href={`/dashboard/alunos/${user?.id}`} className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
-                  Meu Histórico
+                <Link href="/dashboard/config" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors flex items-center gap-1 uppercase tracking-widest hover:border-b-2 hover:border-lime-500 py-1">
+                  <Settings size={14} /> Config
                 </Link>
               </div>
             )}
@@ -67,13 +56,13 @@ export default async function Navbar() {
           {/* PERFIL E SAIR */}
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm text-white font-medium">{profile.full_name}</p>
-              <p className="text-xs text-slate-500 capitalize">{profile.role === 'coach' ? 'Treinador' : 'Atleta'}</p>
+              <p className="text-sm text-white font-bold">{profile.full_name}</p>
+              <p className="text-[10px] text-lime-500 font-black uppercase tracking-widest">{profile.role === 'coach' ? 'Treinador' : 'Atleta'}</p>
             </div>
             
             <form action="/auth/signout" method="post">
-                <button className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" title="Sair do Sistema">
-                    <LogOut size={20} />
+                <button className="p-3 text-zinc-500 hover:text-red-500 hover:bg-zinc-900 rounded-xl transition-colors" title="Sair">
+                    <LogOut size={22} />
                 </button>
             </form>
           </div>

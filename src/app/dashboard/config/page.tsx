@@ -24,7 +24,7 @@ export default function ConfigPage() {
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(filename);
 
       await supabase.from('profiles').update({ logo_url: publicUrl }).eq('id', user.id);
-      alert("Logo atualizada! Atualize a página.");
+      alert("Logo atualizada com sucesso!");
     } catch (error) {
       alert("Erro ao enviar logo.");
     } finally {
@@ -33,13 +33,30 @@ export default function ConfigPage() {
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-white">Configurações</h1>
-      <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-         <h2 className="text-lg font-semibold text-white mb-4 flex gap-2"><ImageIcon/> Logo do App</h2>
-         <label className="cursor-pointer bg-slate-950 border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl p-8 flex flex-col items-center justify-center transition-all">
-            {loading ? <Loader2 className="animate-spin text-blue-500"/> : <Upload className="text-slate-400 mb-2"/>}
-            <span className="text-sm text-slate-400">Clique para enviar sua logo</span>
+    <div className="max-w-2xl mx-auto space-y-8 p-6 bg-black min-h-screen">
+      <div className="border-b border-zinc-900 pb-4">
+          <h1 className="text-3xl font-black text-white uppercase italic tracking-tighter">Configurações</h1>
+          <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest mt-1">Personalize sua área</p>
+      </div>
+
+      <div className="bg-zinc-950 border border-zinc-900 p-8 rounded-2xl shadow-lg">
+         <h2 className="text-sm font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wider">
+            <ImageIcon className="text-lime-500" size={20}/> 
+            Identidade Visual
+         </h2>
+         
+         <label className="cursor-pointer bg-black border-2 border-dashed border-zinc-800 hover:border-lime-500 hover:bg-zinc-900/50 rounded-xl p-12 flex flex-col items-center justify-center transition-all group">
+            {loading ? (
+                <Loader2 className="animate-spin text-lime-500" size={32}/>
+            ) : (
+                <div className="bg-zinc-900 p-4 rounded-full mb-3 group-hover:scale-110 transition-transform">
+                    <Upload className="text-zinc-500 group-hover:text-lime-500 transition-colors" size={24}/>
+                </div>
+            )}
+            <span className="text-sm font-bold text-zinc-400 group-hover:text-white uppercase tracking-wide">
+                {loading ? "Enviando..." : "Clique para alterar a Logo"}
+            </span>
+            <span className="text-[10px] text-zinc-600 mt-2 font-bold">JPG ou PNG (Max 2MB)</span>
             <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
          </label>
       </div>

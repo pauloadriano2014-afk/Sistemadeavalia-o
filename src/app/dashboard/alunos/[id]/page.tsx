@@ -1,45 +1,43 @@
 import { createClient } from "@/lib/supabase-server";
-import { ArrowLeft, Weight, TrendingDown, Calendar, Image as ImageIcon, Plus, Sparkles } from "lucide-react"; // Importei Sparkles
+import { 
+  ArrowLeft, Weight, TrendingDown, Calendar, 
+  Image as ImageIcon, Plus, Sparkles, Activity, 
+  ClipboardList 
+} from "lucide-react";
 import Link from "next/link";
 import PhotoComparator from "@/components/PhotoComparator";
 import FeedbackForm from "@/components/FeedbackForm";
 
-// Correção do Next.js 15: params é uma Promise
+// Card de Status Neon
+function StatusCard({ label, value, icon, color = "text-white" }: any) {
+    return (
+        <div className="bg-zinc-950 border border-zinc-900 p-5 rounded-2xl flex flex-col justify-between h-28 relative overflow-hidden group hover:border-zinc-800 transition-colors">
+            <div className="absolute top-0 right-0 p-4 opacity-10 scale-125 origin-top-right group-hover:text-lime-500 transition-colors">
+                {icon}
+            </div>
+            <span className="text-zinc-500 text-[10px] uppercase font-black tracking-widest">{label}</span>
+            <span className={`text-3xl font-black ${color} tracking-tighter italic`}>{value}</span>
+        </div>
+    )
+}
+
 export default async function AlunoDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
-  
-  // 1. Desembrulhar os parâmetros (Obrigatório no Next 15)
+  // 1. CORREÇÃO DO ERRO: Await params
   const resolvedParams = await params;
   const studentId = resolvedParams.id;
   
   const supabase = await createClient();
 
-  // 2. Buscar Perfil (Com log de erro se falhar)
-  const { data: student, error: studentError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', studentId)
-    .single();
+  const { data: student } = await supabase.from('profiles').select('*').eq('id', studentId).single();
 
-  if (studentError || !student) {
-    return (
-      <div className="p-8 text-white bg-red-900/20 border border-red-900 rounded-xl">
-        <h2 className="text-xl font-bold mb-2">Aluno não encontrado</h2>
-        <p className="text-slate-300">O sistema não conseguiu carregar o perfil deste aluno.</p>
-        <Link href="/dashboard/alunos" className="mt-4 inline-block text-blue-400 hover:text-white">
-          &larr; Voltar para lista
-        </Link>
-      </div>
-    );
-  }
+  if (!student) return <div className="text-zinc-500 p-10 font-bold uppercase">Aluno não encontrado</div>;
 
-  // 3. Buscar Histórico COMPLETO
   const { data: rawCheckins } = await supabase
     .from('checkins')
     .select('*, photos(*)')
     .eq('user_id', studentId)
     .order('created_at', { ascending: false });
 
-  // 4. Processar URLs das fotos
   const checkins = rawCheckins?.map(checkin => ({
     ...checkin,
     photos: checkin.photos?.map((photo: any) => {
@@ -48,168 +46,184 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
     })
   })) || [];
 
-  // Cálculos de Resumo
   const currentWeight = checkins[0]?.weight || 0;
   const initialWeight = checkins[checkins.length - 1]?.weight || 0;
   const weightDiff = currentWeight - initialWeight;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in duration-500 pb-20">
+    <div className="min-h-screen bg-black pb-20 text-white font-sans">
       
-      {/* --- CABEÇALHO --- */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/alunos" className="p-2 bg-slate-900 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
-            <ArrowLeft size={20} />
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-white">{student.full_name}</h1>
-            <p className="text-slate-400 text-sm">Monitoramento de Evolução</p>
-          </div>
+      {/* HEADER DARK NEON */}
+      <div className="bg-black border-b border-zinc-900 sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+                <Link href="/dashboard/alunos" className="p-2 text-zinc-500 hover:text-lime-400 transition-colors">
+                    <ArrowLeft size={24} />
+                </Link>
+                <div>
+                    <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3">
+                        {student.full_name}
+                        {student.selected_goal && (
+                            <span className="text-[10px] bg-zinc-900 text-lime-400 border border-zinc-800 px-2 py-0.5 rounded not-italic font-bold tracking-widest">
+                                {student.selected_goal.replace('_', ' ')}
+                            </span>
+                        )}
+                    </h1>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+                 {/* Botão IA */}
+                 <Link 
+                   href={`/dashboard/alunos/${studentId}/comparativo`}
+                   className="hidden md:flex items-center gap-2 bg-zinc-900 text-lime-400 border border-zinc-800 hover:border-lime-500 hover:text-white px-4 py-2 rounded-xl font-black uppercase tracking-wider text-xs transition-all"
+                 >
+                   <Sparkles size={16} />
+                   IA 4.0
+                 </Link>
+
+                 {/* Novo Check-in */}
+                 <Link 
+                   href={`/dashboard/alunos/${studentId}/novo-checkin`}
+                   className="flex items-center gap-2 bg-lime-500 hover:bg-lime-400 text-black px-5 py-2 rounded-xl font-black uppercase tracking-wider text-xs transition-colors shadow-[0_0_15px_rgba(132,204,22,0.3)] hover:shadow-[0_0_25px_rgba(132,204,22,0.5)]"
+                 >
+                   <Plus size={18} />
+                   <span className="hidden sm:inline">Novo Check-in</span>
+                 </Link>
+            </div>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-4">
-             <div className="px-4 py-2 bg-slate-900 rounded-lg border border-slate-800 hidden sm:block">
-                <span className="text-xs text-slate-500 uppercase font-bold mr-2">Objetivo:</span>
-                <span className="text-blue-400 font-bold uppercase">{student.selected_goal?.replace('_', ' ') || 'Geral'}</span>
-             </div>
+      </div>
 
-             {/* BOTÃO COMPARAR (IA) - NOVO */}
-             <Link 
-               href={`/dashboard/alunos/${studentId}/comparativo`}
-               className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
-             >
-               <Sparkles size={16} className="text-purple-400" />
-               Comparar (IA)
-             </Link>
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
 
-             {/* BOTÃO DE LANÇAR CHECK-IN (CONCIERGE) */}
-             <Link 
-               href={`/dashboard/alunos/${studentId}/novo-checkin`}
-               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors shadow-lg shadow-blue-900/20"
-             >
-               <Plus size={16} />
-               Lançar Check-in
-             </Link>
+        {/* STATS */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatusCard 
+                label="Peso Atual" 
+                value={`${currentWeight} kg`} 
+                icon={<Weight size={24} className="text-lime-500"/>}
+            />
+            <StatusCard 
+                label="Evolução" 
+                value={`${weightDiff > 0 ? '+' : ''}${weightDiff.toFixed(1)} kg`} 
+                color={weightDiff <= 0 ? "text-lime-400" : "text-red-500"}
+                icon={<TrendingDown size={24} className={weightDiff <= 0 ? "text-lime-500" : "text-red-500"}/>}
+            />
+            <StatusCard 
+                label="Check-ins" 
+                value={checkins.length} 
+                icon={<Calendar size={24} className="text-zinc-500"/>}
+            />
+            <StatusCard 
+                label="Frequência" 
+                value="Alta" 
+                icon={<Activity size={24} className="text-blue-500"/>}
+            />
         </div>
-      </div>
 
-      {/* --- CARDS DE STATUS --- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatusCard 
-          label="Peso Atual" 
-          value={`${currentWeight || '--'} kg`} 
-          icon={<Weight className="text-blue-500" size={24} />} 
-        />
-        <StatusCard 
-          label="Evolução Total" 
-          value={`${weightDiff > 0 ? '+' : ''}${weightDiff.toFixed(1)} kg`} 
-          textColor={weightDiff <= 0 ? "text-emerald-500" : "text-red-500"}
-          icon={<TrendingDown className={weightDiff <= 0 ? "text-emerald-500" : "text-red-500"} size={24} />} 
-        />
-        <StatusCard 
-          label="Total de Check-ins" 
-          value={checkins.length.toString()} 
-          icon={<Calendar className="text-slate-400" size={24} />} 
-        />
-      </div>
+        {/* COMPARADOR (Contido) */}
+        <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-lime-500/5 blur-[100px] rounded-full pointer-events-none"></div>
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-900 relative z-10">
+                <div className="p-2 bg-lime-500/10 rounded-lg text-lime-500">
+                    <ImageIcon size={20} />
+                </div>
+                <div>
+                    <h2 className="text-lg font-black text-white uppercase tracking-tight">Comparador Rápido</h2>
+                    <p className="text-xs text-zinc-500 font-bold tracking-wide">Evolução visual lado a lado</p>
+                </div>
+            </div>
+            <div className="relative z-10">
+                <PhotoComparator checkins={checkins} /> 
+            </div>
+        </div>
 
-      {/* --- O COMPARADOR VISUAL --- */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <ImageIcon size={20} className="text-blue-500"/>
-          Comparativo Visual
-        </h2>
-        <p className="text-slate-400 text-sm">Selecione duas datas para comparar a evolução lado a lado.</p>
-        
-        <PhotoComparator checkins={checkins} />
-      </div>
-
-      {/* --- HISTÓRICO DETALHADO (COM FEEDBACK) --- */}
-      <div className="space-y-4 pt-8 border-t border-slate-800">
-        <h2 className="text-xl font-bold text-white">Histórico Detalhado</h2>
-        
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-          <table className="w-full text-left">
-            <thead className="bg-slate-950/50 text-slate-400 text-xs uppercase">
-              <tr>
-                <th className="px-6 py-4 w-32">Data</th>
-                <th className="px-6 py-4 w-24">Peso</th>
-                <th className="px-6 py-4">Detalhes & Avaliação</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {checkins.map((checkin: any) => (
-                <tr key={checkin.id} className="hover:bg-slate-800/20 transition-colors align-top">
-                  
-                  {/* Data */}
-                  <td className="px-6 py-6 text-white font-mono whitespace-nowrap">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-base">
-                        {new Date(checkin.created_at).toLocaleDateString('pt-BR')}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {new Date(checkin.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' })}
-                      </span>
+        {/* PRONTUÁRIO */}
+        <div>
+            <h2 className="text-lg font-black text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
+                <ClipboardList className="text-zinc-600" size={24}/> Prontuário do Atleta
+            </h2>
+            
+            <div className="space-y-6">
+                {checkins.length === 0 && (
+                    <div className="text-center py-16 bg-zinc-950 rounded-2xl border-2 border-dashed border-zinc-900">
+                        <p className="text-zinc-600 font-bold uppercase text-xs tracking-widest">Nenhum registro encontrado</p>
                     </div>
-                  </td>
+                )}
 
-                  {/* Peso */}
-                  <td className="px-6 py-6">
-                    <div className="flex items-center gap-1 text-slate-300 font-bold text-lg">
-                      {checkin.weight} <span className="text-xs text-slate-500 font-normal">kg</span>
-                    </div>
-                  </td>
+                {checkins.map((checkin) => (
+                    <div key={checkin.id} className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 hover:border-lime-500/30 transition-colors duration-300 group">
+                        <div className="flex flex-col md:flex-row gap-8">
+                            
+                            {/* Data e Peso */}
+                            <div className="flex md:flex-col items-center md:items-start justify-between md:justify-start gap-1 md:w-32 md:border-r md:border-zinc-900 md:pr-6 shrink-0">
+                                <div>
+                                    <span className="text-4xl font-black text-white tracking-tighter block leading-none">
+                                        {new Date(checkin.created_at).getDate()}
+                                    </span>
+                                    <span className="text-xs text-lime-500 uppercase font-black tracking-widest">
+                                        {new Date(checkin.created_at).toLocaleString('pt-BR', { month: 'short' })}
+                                    </span>
+                                    <span className="text-[10px] text-zinc-600 block mt-1 font-bold">
+                                        {new Date(checkin.created_at).getFullYear()}
+                                    </span>
+                                </div>
+                                <div className="mt-0 md:mt-6 text-right md:text-left bg-black px-3 py-1 rounded border border-zinc-800">
+                                    <span className="block text-lg font-mono font-bold text-white">
+                                        {checkin.weight}kg
+                                    </span>
+                                </div>
+                            </div>
 
-                  {/* Conteúdo Central (Relato + Feedback) */}
-                  <td className="px-6 py-6">
-                    {/* Relato do Aluno */}
-                    <div className="mb-4">
-                      <p className="text-xs text-slate-500 font-bold uppercase mb-1">Relato do Aluno:</p>
-                      <p className="text-slate-300 text-sm italic bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
-                        "{checkin.notes || 'Sem observações.'}"
-                      </p>
-                    </div>
+                            {/* Conteúdo */}
+                            <div className="flex-1 space-y-6">
+                                {checkin.notes && (
+                                    <div className="bg-black p-4 rounded-xl border border-zinc-900 relative">
+                                        <p className="text-[10px] text-zinc-500 font-black uppercase mb-2">Relato do Aluno</p>
+                                        <p className="text-sm text-zinc-300 italic leading-relaxed">
+                                            "{checkin.notes}"
+                                        </p>
+                                    </div>
+                                )}
 
-                    {/* Mini Galeria (Visualização Rápida) */}
-                    {checkin.photos && checkin.photos.length > 0 && (
-                        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-                          {checkin.photos.map((p: any) => (
-                            <a key={p.id} href={p.url} target="_blank" className="block w-12 h-16 relative rounded overflow-hidden border border-slate-700 hover:border-blue-500 transition-colors flex-shrink-0 cursor-zoom-in">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={p.url} alt={p.pose_label} className="w-full h-full object-cover" />
-                            </a>
-                          ))}
+                                {checkin.photos && checkin.photos.length > 0 && (
+                                    <div>
+                                        <p className="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Evidências</p>
+                                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+                                            {checkin.photos.map((p: any) => (
+                                                <a 
+                                                    key={p.id} 
+                                                    href={p.url} 
+                                                    target="_blank" 
+                                                    className="relative w-20 h-28 bg-black rounded-lg border border-zinc-800 shrink-0 hover:border-lime-500 transition-all overflow-hidden group/img"
+                                                >
+                                                    {/* CORREÇÃO DO ALINHAMENTO */}
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img 
+                                                        src={p.url} 
+                                                        className="w-full h-full object-cover object-top opacity-80 group-hover/img:opacity-100 transition-opacity" 
+                                                        alt={p.pose_label}
+                                                    />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="pt-4 border-t border-zinc-900">
+                                     <FeedbackForm 
+                                        checkinId={checkin.id} 
+                                        studentId={studentId} 
+                                        initialFeedback={checkin.feedback}
+                                    />
+                                </div>
+                            </div>
                         </div>
-                    )}
-
-                    {/* ÁREA DE FEEDBACK (Onde você trabalha) */}
-                    <FeedbackForm 
-                      checkinId={checkin.id} 
-                      studentId={studentId} 
-                      initialFeedback={checkin.feedback} 
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </div>
+                ))}
+            </div>
         </div>
-      </div>
 
-    </div>
-  );
-}
-
-function StatusCard({ label, value, icon, textColor = "text-white" }: any) {
-  return (
-    <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl flex items-center justify-between">
-      <div>
-        <p className="text-slate-500 text-xs font-bold uppercase mb-1">{label}</p>
-        <p className={`text-2xl font-bold ${textColor}`}>{value}</p>
-      </div>
-      <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
-        {icon}
       </div>
     </div>
   );

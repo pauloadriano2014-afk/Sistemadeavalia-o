@@ -1,69 +1,37 @@
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, ClipboardList, Plus, ArrowRight, Activity } from "lucide-react";
+import { Users, ClipboardList, Plus, ArrowRight, Activity, TrendingUp, Zap, Trophy } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  
-  // 1. Verificar Autenticação
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return redirect("/login");
 
-  // 2. Buscar Perfil
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
 
-  if (!profile) return <div>Erro ao carregar perfil.</div>;
+  if (!profile) return null;
 
-  // 3. Buscar DADOS REAIS para o Coach
+  // DADOS REAIS + MOCKUP PARA VISUAL
   let totalStudents = 0;
   let pendingCheckins = 0;
   let recentStudents: any[] = [];
 
-  if (profile.role === 'coach' && profile.tenant_id) {
-    // A. Contar alunos
-    const { count: studentCount } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'student')
-      .eq('tenant_id', profile.tenant_id);
-    
-    totalStudents = studentCount || 0;
-
-    // B. Contar Avaliações (Check-ins não revisados)
-    const { count: checkinCount } = await supabase
-      .from('checkins')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', profile.tenant_id)
-      .neq('status', 'reviewed'); // Só conta os pendentes
-    
-    pendingCheckins = checkinCount || 0;
-
-    // C. Buscar últimos 3 alunos
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('role', 'student')
-      .eq('tenant_id', profile.tenant_id)
-      .order('created_at', { ascending: false })
-      .limit(3);
-      
+  if (profile.role === 'coach') {
+    const { count: sCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('tenant_id', profile.tenant_id);
+    totalStudents = sCount || 0;
+    const { count: cCount } = await supabase.from('checkins').select('*', { count: 'exact', head: true }).eq('tenant_id', profile.tenant_id).neq('status', 'reviewed');
+    pendingCheckins = cCount || 0;
+    const { data } = await supabase.from('profiles').select('*').eq('role', 'student').eq('tenant_id', profile.tenant_id).order('created_at', { ascending: false }).limit(3);
     recentStudents = data || [];
   }
 
   return (
-    <div className="animate-in fade-in duration-500">
+    // MUDANÇA 1: Fundo com Gradiente Radial (Luz de Palco)
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black text-white p-6 animate-in fade-in duration-700">
+      
       {profile.role === 'coach' ? (
-        <CoachView 
-          profile={profile} 
-          totalStudents={totalStudents} 
-          pendingCheckins={pendingCheckins} 
-          recentStudents={recentStudents} 
-        />
+        <CoachView profile={profile} total={totalStudents} pending={pendingCheckins} recents={recentStudents} />
       ) : (
         <StudentView profile={profile} />
       )}
@@ -71,145 +39,170 @@ export default async function DashboardPage() {
   );
 }
 
-// --- VIEW DO COACH ---
-function CoachView({ 
-  profile, 
-  totalStudents, 
-  pendingCheckins, 
-  recentStudents 
-}: { 
-  profile: any, 
-  totalStudents: number, 
-  pendingCheckins: number, 
-  recentStudents: any[] 
-}) {
+function CoachView({ profile, total, pending, recents }: any) {
   return (
-    <div className="space-y-8">
-      {/* Cabeçalho */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">Painel de Controle</h1>
-        <p className="text-slate-400">Visão geral do time {profile.full_name}.</p>
+    <div className="max-w-7xl mx-auto space-y-10">
+      
+      {/* HEADER ELITE */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/10 pb-6">
+        <div>
+            <div className="flex items-center gap-2 mb-1">
+                <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
+                </span>
+                <p className="text-lime-500 font-bold text-[10px] uppercase tracking-[0.2em]">Sistema Operacional</p>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter">
+                HEADQUARTERS
+            </h1>
+            <p className="text-zinc-400 font-medium text-sm mt-2">
+                Bem-vindo ao comando, <span className="text-white">{profile.full_name}</span>.
+            </p>
+        </div>
+        
+        <div className="flex gap-3">
+            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all backdrop-blur-md">
+                Relatórios
+            </button>
+            <Link href="/dashboard/alunos/novo" className="bg-lime-500 hover:bg-lime-400 text-black px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(132,204,22,0.3)] hover:shadow-[0_0_30px_rgba(132,204,22,0.5)] flex items-center gap-2">
+                <Plus size={16} /> Novo Atleta
+            </Link>
+        </div>
       </div>
 
-      {/* 1. KPIs Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* GRID DE KPIs (Efeito Glass) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* CARD 1: Atletas */}
-        <div className="bg-blue-950/30 border border-blue-900/50 p-6 rounded-2xl relative overflow-hidden group hover:border-blue-700/50 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Users size={80} />
-          </div>
-          <div className="relative z-10">
-            <p className="text-blue-400 text-sm font-bold uppercase tracking-wider mb-2">Atletas Ativos</p>
-            <p className="text-5xl font-bold text-white mb-4">{totalStudents}</p>
-            <Link href="/dashboard/alunos" className="text-sm text-blue-300 hover:text-white inline-flex items-center gap-2 font-medium">
-              Gerenciar time <ArrowRight size={16}/>
-            </Link>
-          </div>
-        </div>
-
-        {/* CARD 2: Avaliações */}
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl relative overflow-hidden group hover:border-slate-700 transition-colors">
-           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-            <ClipboardList size={80} />
-          </div>
-          <div className="relative z-10">
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-slate-400 text-sm font-bold uppercase tracking-wider">Avaliações Pendentes</p>
-              <div className="p-2 bg-orange-500/10 text-orange-400 rounded-lg"><ClipboardList size={20}/></div>
+        {/* Card 1 */}
+        <div className="group relative bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-3xl p-8 overflow-hidden hover:border-lime-500/30 transition-all duration-500">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
+                <Users size={120} />
             </div>
-            
-            <p className="text-5xl font-bold text-white">{pendingCheckins}</p>
-            
-            <p className="text-slate-500 text-sm mt-4">
-              {pendingCheckins > 0 ? "Existem check-ins para analisar." : "Tudo em dia por enquanto."}
-            </p>
-            
-            {pendingCheckins > 0 && (
-                <Link href="/dashboard/avaliacoes" className="block mt-2 text-sm text-orange-400 hover:text-orange-300">
-                    Ver fila de avaliações &rarr;
+            <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 bg-zinc-800/50 rounded-lg border border-white/5 text-zinc-400">
+                        <Users size={20}/>
+                    </div>
+                    <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Squad Ativo</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                    <h3 className="text-6xl font-black text-white tracking-tighter">{total}</h3>
+                    <span className="text-zinc-500 font-bold text-sm">atletas</span>
+                </div>
+                <Link href="/dashboard/alunos" className="mt-6 inline-flex items-center gap-2 text-lime-500 text-xs font-black uppercase tracking-widest hover:text-white transition-colors group-hover:translate-x-2 duration-300">
+                    Acessar Lista <ArrowRight size={14}/>
                 </Link>
-            )}
-          </div>
+            </div>
         </div>
 
+        {/* Card 2 - Pendências (Destaque se houver) */}
+        <div className={`group relative backdrop-blur-xl border rounded-3xl p-8 overflow-hidden transition-all duration-500 ${pending > 0 ? 'bg-lime-500/5 border-lime-500/20 hover:border-lime-500/50' : 'bg-zinc-900/40 border-white/5'}`}>
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
+                <ClipboardList size={120} />
+            </div>
+            <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className={`p-2 rounded-lg border text-zinc-400 ${pending > 0 ? 'bg-lime-500/10 border-lime-500/20 text-lime-500' : 'bg-zinc-800/50 border-white/5'}`}>
+                        <Activity size={20}/>
+                    </div>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${pending > 0 ? 'text-lime-500' : 'text-zinc-500'}`}>Status do Feed</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                    <h3 className="text-6xl font-black text-white tracking-tighter">{pending}</h3>
+                    <span className="text-zinc-500 font-bold text-sm">análises</span>
+                </div>
+                <p className="mt-6 text-zinc-400 text-xs font-bold">
+                    {pending > 0 ? "⚠️ Atenção requerida no prontuário." : "✅ Tudo limpo por aqui."}
+                </p>
+            </div>
+        </div>
+
+        {/* Card 3 - Performance (Visual) */}
+        <div className="group relative bg-gradient-to-br from-zinc-900/60 to-black border border-white/5 rounded-3xl p-8 overflow-hidden">
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Retenção Mensal</span>
+                    <h3 className="text-3xl font-black text-white mt-1">94%</h3>
+                </div>
+                <div className="bg-lime-500/10 p-2 rounded-full text-lime-500">
+                    <TrendingUp size={20}/>
+                </div>
+            </div>
+            {/* Mini Gráfico CSS */}
+            <div className="flex items-end gap-1 h-24 w-full">
+                {[40,60,30,80,50,90,70,100,60,80].map((h, i) => (
+                    <div key={i} className="flex-1 bg-zinc-800 hover:bg-lime-500 transition-colors duration-300 rounded-t-sm" style={{height: `${h}%`}}></div>
+                ))}
+            </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* 2. Área Principal: Gráfico de Desempenho */}
-        <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-white flex items-center gap-2">
-              <Activity className="text-purple-500" size={20}/>
-              Desempenho do Time
-            </h3>
-            <select className="bg-slate-950 border border-slate-800 text-slate-300 text-sm rounded-lg px-3 py-1">
-              <option>Últimos 30 dias</option>
-            </select>
-          </div>
-          
-          {/* Placeholder do Gráfico */}
-          <div className="h-48 flex items-end justify-between gap-2 px-2">
-            {[40, 70, 45, 90, 60, 80, 50, 75, 60, 95, 80, 100].map((h, i) => (
-              <div key={i} className="w-full bg-slate-800 rounded-t-sm hover:bg-blue-600 transition-colors relative group" style={{ height: `${h}%` }}>
-                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity font-bold">
-                   {h}%
-                 </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex justify-between text-xs text-slate-500 uppercase font-medium">
-            <span>Semana 1</span>
-            <span>Semana 2</span>
-            <span>Semana 3</span>
-            <span>Semana 4</span>
-          </div>
+        {/* GRÁFICO PRINCIPAL */}
+        <div className="lg:col-span-2 bg-zinc-900/30 border border-white/5 rounded-3xl p-8 relative overflow-hidden backdrop-blur-sm">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-lime-500/20 to-transparent"></div>
+            
+            <div className="flex justify-between items-center mb-8">
+                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3">
+                    <Zap className="text-lime-500" size={24} fill="currentColor"/> Performance da Equipe
+                </h3>
+                <div className="flex gap-2">
+                    <span className="h-3 w-3 bg-lime-500 rounded-full"></span>
+                    <span className="h-3 w-3 bg-zinc-700 rounded-full"></span>
+                </div>
+            </div>
+
+            {/* Gráfico Barras Estilizado */}
+            <div className="h-64 w-full flex items-end justify-between gap-2 md:gap-4 px-2">
+                {[35, 50, 45, 60, 80, 70, 90, 100, 85, 60, 75, 95].map((val, i) => (
+                    <div key={i} className="w-full flex flex-col justify-end group cursor-pointer">
+                        <div 
+                            className="w-full bg-zinc-800/50 border-t border-x border-white/5 rounded-t-md group-hover:bg-lime-500 group-hover:shadow-[0_0_20px_rgba(132,204,22,0.4)] transition-all duration-300 relative"
+                            style={{ height: `${val}%` }}
+                        >
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-black text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity mb-2">
+                                {val}%
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div className="w-full h-px bg-white/10 mt-0"></div>
+            <div className="flex justify-between mt-4 text-[10px] text-zinc-600 font-black uppercase tracking-widest">
+                <span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span>
+            </div>
         </div>
 
-        {/* 3. Coluna Lateral: Últimos Alunos + Atalho */}
-        <div className="space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-white text-sm uppercase">Chegaram Recentemente</h3>
-              <Link href="/dashboard/alunos/novo" className="text-blue-400 hover:text-white">
-                <Plus size={20} />
-              </Link>
-            </div>
-
-            <div className="space-y-3">
-              {recentStudents.length > 0 ? recentStudents.map((student) => (
-                <div key={student.id} className="flex items-center gap-3 p-3 bg-slate-950/50 rounded-xl border border-slate-800/50 hover:border-slate-700 transition-colors">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-500 font-bold border border-slate-700">
-                    {student.full_name?.[0] || 'A'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{student.full_name}</p>
-                    <p className="text-xs text-slate-500 truncate">{student.selected_goal || 'Sem objetivo'}</p>
-                  </div>
-                </div>
-              )) : (
-                <div className="text-center py-8 text-slate-500 text-sm">
-                  Sem novos alunos.
-                </div>
-              )}
-            </div>
+        {/* LISTA LATERAL */}
+        <div className="bg-zinc-900/30 border border-white/5 rounded-3xl p-8 backdrop-blur-sm">
+            <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-6">Novos Recrutas</h3>
             
-            <Link href="/dashboard/alunos" className="block mt-4 text-center text-sm text-slate-500 hover:text-white transition-colors border-t border-slate-800 pt-3">
-              Ver lista completa
-            </Link>
-          </div>
+            <div className="space-y-4">
+                {recents.map((s: any) => (
+                    <div key={s.id} className="flex items-center gap-4 p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-lime-500/30 transition-all group cursor-pointer">
+                        <div className="h-10 w-10 rounded-xl bg-zinc-900 flex items-center justify-center text-lime-500 font-black border border-white/5 group-hover:scale-110 transition-transform">
+                            {s.full_name[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-bold text-white truncate group-hover:text-lime-400 transition-colors">{s.full_name}</h4>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wide truncate">{s.selected_goal || 'Sem Objetivo'}</p>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity text-lime-500">
+                            <ArrowRight size={16}/>
+                        </div>
+                    </div>
+                ))}
+                
+                {recents.length === 0 && (
+                    <div className="text-center py-10 text-zinc-600 text-xs font-bold uppercase">Nenhum registro recente</div>
+                )}
+            </div>
 
-          {/* Atalho Rápido */}
-          <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 text-white shadow-lg shadow-blue-900/20">
-            <h3 className="font-bold text-lg mb-1">Novo Aluno?</h3>
-            <p className="text-blue-100 text-sm mb-4 opacity-90">Cadastre e inicie a avaliação.</p>
-            <Link href="/dashboard/alunos/novo">
-              <button className="w-full bg-white text-blue-700 font-bold py-2.5 rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 cursor-pointer">
-                <Plus size={18}/> Cadastrar
-              </button>
+            <Link href="/dashboard/alunos" className="mt-8 block w-full py-4 text-center text-xs font-black text-zinc-500 hover:text-white uppercase tracking-widest border border-dashed border-zinc-800 rounded-xl hover:border-zinc-600 transition-all">
+                Ver todos os atletas
             </Link>
-          </div>
         </div>
 
       </div>
@@ -217,60 +210,6 @@ function CoachView({
   );
 }
 
-// --- VIEW DO ALUNO (ATUALIZADA COM FEEDBACK) ---
-async function StudentView({ profile }: { profile: any }) {
-  const supabase = await createClient();
-  
-  // Buscar último check-in para ver se tem feedback
-  const { data: lastCheckin } = await supabase
-    .from('checkins')
-    .select('*')
-    .eq('user_id', profile.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  return (
-    <div className="space-y-8">
-      {/* Cabeçalho Aluno */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">Minha Evolução</h1>
-        <p className="text-slate-400">
-          Objetivo Atual: <span className="text-blue-400 font-semibold uppercase">{profile.selected_goal || 'Não definido'}</span>
-        </p>
-      </div>
-
-      {/* FEEDBACK DO COACH (Só aparece se tiver feedback novo) */}
-      {lastCheckin?.feedback && (
-        <div className="bg-blue-900/20 border border-blue-800 rounded-xl p-6 animate-in slide-in-from-top-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-blue-600 rounded-lg text-white">
-              <ClipboardList size={20} />
-            </div>
-            <h3 className="font-bold text-white text-lg">Feedback do Coach</h3>
-          </div>
-          <p className="text-slate-200 text-lg leading-relaxed">
-            "{lastCheckin.feedback}"
-          </p>
-          <p className="text-xs text-blue-400 mt-4 font-bold uppercase">
-            Avaliado em {new Date().toLocaleDateString('pt-BR')}
-          </p>
-        </div>
-      )}
-
-      {/* Botão de Check-in */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-        <div>
-          <h3 className="text-xl font-bold text-white mb-2">Hora de atualizar o shape! 📸</h3>
-          <p className="text-slate-300">Seu coach está aguardando as fotos e medidas dessa semana.</p>
-        </div>
-        
-        <Link href="/dashboard/checkin/novo">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg hover:scale-105">
-            Enviar Check-in Agora
-          </button>
-        </Link>
-      </div>
-    </div>
-  );
+function StudentView({ profile }: any) {
+    return <div className="text-white p-10">Área do Aluno (Em construção visual)...</div>
 }

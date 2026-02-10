@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useParams } from "next/navigation";
 import { analyzeEvolution, ImagePair, CompareContext } from "@/app/dashboard/actions/ai-compare";
-import { ArrowLeft, Sparkles, Loader2, Printer, X, PlusCircle, Upload, Flame, Activity } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Printer, X, PlusCircle, Upload, Flame, Activity, FileText, Calendar } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
 import imageCompression from 'browser-image-compression';
@@ -28,11 +28,13 @@ export default function ComparativoPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Dados do Aluno
   const [student, setStudent] = useState<any>(null);
-  
-  // Slots (Agora armazenam a string Base64 da imagem local)
   const [slots, setSlots] = useState<Record<string, { before: string | null, after: string | null }>>({});
+  
+  // Datas das fotos
+  const [dateBefore, setDateBefore] = useState("");
+  const [dateAfter, setDateAfter] = useState(new Date().toISOString().split('T')[0]); 
+
   const [activePoses, setActivePoses] = useState<string[]>([]);
 
   // Contexto
@@ -45,10 +47,15 @@ export default function ComparativoPage() {
   const [sleep, setSleep] = useState("bom");
   
   // NOVOS CAMPOS
-  const [cardio, setCardio] = useState("30min pos-treino");
-  const [calories, setCalories] = useState("2000");
+  const [calorieRange, setCalorieRange] = useState("2000-2500");
+  const [cardioType, setCardioType] = useState("esteira_caminhada");
+  const [cardioIntensity, setCardioIntensity] = useState("moderada");
+  const [cardioBurn, setCardioBurn] = useState("300-400");
 
-  // UI
+  const [weightBefore, setWeightBefore] = useState("");
+  const [weightAfter, setWeightAfter] = useState("");
+  const [coachContext, setCoachContext] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState("");
@@ -58,7 +65,6 @@ export default function ComparativoPage() {
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', studentId).single();
       setStudent(profile);
 
-      // Configurar Poses
       let templateKey = 'default';
       const goal = profile.selected_goal || 'emagrecimento';
       const gender = profile.gender || 'female';
@@ -78,33 +84,18 @@ export default function ComparativoPage() {
     loadData();
   }, [studentId, supabase]);
 
-  // --- UPLOAD DIRETO NO QUADRADO ---
   const handleSlotUpload = async (e: React.ChangeEvent<HTMLInputElement>, pose: string, type: 'before' | 'after') => {
       const file = e.target.files?.[0];
       if (!file) return;
-
       try {
-        // Comprime a imagem (Crucial para não travar a IA com arquivo grande)
         const compressed = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280 });
         const base64 = await imageCompression.getDataUrlFromFile(compressed);
-
-        setSlots(prev => ({
-            ...prev,
-            [pose]: {
-                ...prev[pose],
-                [type]: base64
-            }
-        }));
-      } catch (err) {
-          alert("Erro ao processar imagem. Tente outra.");
-      }
+        setSlots(prev => ({ ...prev, [pose]: { ...prev[pose], [type]: base64 } }));
+      } catch (err) { alert("Erro ao processar imagem."); }
   };
 
   const clearSlot = (pose: string, type: 'before' | 'after') => {
-    setSlots(prev => ({
-        ...prev,
-        [pose]: { ...prev[pose], [type]: null }
-    }));
+    setSlots(prev => ({ ...prev, [pose]: { ...prev[pose], [type]: null } }));
   };
 
   const runAI = async () => {
@@ -115,11 +106,7 @@ export default function ComparativoPage() {
     activePoses.forEach(pose => {
         const slot = slots[pose];
         if (slot?.before && slot?.after) {
-            validPairs.push({
-                poseLabel: pose,
-                before: slot.before!, // Já é base64
-                after: slot.after!    // Já é base64
-            });
+            validPairs.push({ poseLabel: pose, before: slot.before!, after: slot.after! });
         }
     });
 
@@ -128,6 +115,13 @@ export default function ComparativoPage() {
         setAnalyzing(false);
         return;
     }
+
+    let formattedCardio = "Não realiza cardio";
+    if (cardioType !== "nenhum") {
+        formattedCardio = `${cardioType.replace('_', ' ')} (${cardioIntensity}) - Gasto: ~${cardioBurn}kcal`;
+    }
+    
+    const formattedCalories = `${calorieRange} kcal`;
 
     const context: CompareContext = {
         name: student.full_name,
@@ -140,156 +134,241 @@ export default function ComparativoPage() {
         phase: phase,
         dietCompliance: diet,
         sleep: sleep,
-        // Enviando novos campos com nomes claros para a IA
-        ingestedCalories: calories,
-        cardioProtocol: cardio
+        ingestedCalories: formattedCalories,
+        cardioProtocol: formattedCardio,
+        weightBefore: weightBefore || "Não inf.",
+        weightAfter: weightAfter || "Não inf.",
+        coachContext: coachContext || "Sem contexto adicional."
     };
 
     const response = await analyzeEvolution(validPairs, context);
     if (response.error) alert(response.error);
     else setResult(response.text || "");
-    
     setAnalyzing(false);
   };
 
-  if (loading) return <div className="p-10 text-center text-slate-500">Carregando...</div>;
+  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-lime-500 font-bold uppercase tracking-widest animate-pulse">Carregando estúdio...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-20 print:bg-white print:p-0">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black text-white pb-20 print:bg-white print:p-0">
       
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-6 print:hidden">
-        <Link href={`/dashboard/alunos/${studentId}`} className="text-slate-400 hover:text-white flex items-center gap-2">
-            <ArrowLeft size={20} /> Voltar
-        </Link>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Sparkles className="text-purple-500" /> Comparativo IA 4.0
-        </h1>
-      </div>
+      {/* HEADER CORRIGIDO PARA NÃO VAZAR */}
+<div className="w-full max-w-7xl mx-auto px-6 py-6 mb-8 border-b border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-0 bg-black/90 backdrop-blur-md z-50 print:hidden">
+    
+    {/* Botão Voltar */}
+    <Link href={`/dashboard/alunos/${studentId}`} className="text-zinc-400 hover:text-lime-400 flex items-center gap-2 font-bold uppercase tracking-wider text-xs transition-colors shrink-0 group">
+        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
+        <span>Voltar ao Prontuário</span>
+    </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    {/* Título Principal - Agora com quebra inteligente e sem overflow */}
+    <div className="flex flex-wrap items-center gap-2 md:gap-3 text-right">
+        <div className="flex items-center gap-2">
+            <Sparkles className="text-lime-500 shrink-0" size={20} /> 
+            <h1 className="text-lg md:text-2xl font-black text-white uppercase italic tracking-tighter leading-none">
+                Comparativo IA
+            </h1>
+        </div>
+        <span className="bg-lime-500/10 border border-lime-500/20 text-lime-400 px-2 py-0.5 rounded text-[10px] md:text-xs font-black uppercase tracking-widest leading-none">
+            PRO 4.0
+        </span>
+    </div>
+</div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 px-6">
         
-        {/* ESQUERDA: CONFIGURAÇÃO (25%) */}
-        <div className="lg:col-span-3 space-y-4 print:hidden">
+        {/* ESQUERDA: CONTROLES */}
+        <div className="lg:col-span-4 space-y-6 print:hidden">
             
-            <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
-                <h3 className="text-xs font-bold text-slate-300 uppercase mb-2">⚙️ Dados do Atleta</h3>
+            <div className="bg-zinc-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl space-y-5 shadow-2xl">
+                <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                    <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
+                    </span>
+                    <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Parâmetros</h3>
+                </div>
                 
-                {/* Inputs Rápidos */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* Contexto */}
+                <div className="space-y-2">
+                    <label className="text-[10px] text-lime-400 font-black uppercase tracking-widest flex items-center gap-2">
+                        <FileText size={12}/> Sugestão / História
+                    </label>
+                    <textarea 
+                        value={coachContext} 
+                        onChange={e => setCoachContext(e.target.value)} 
+                        placeholder="Ex: Saiu de um processo de ganho de peso, mas não se adaptou bem e agora está em cutting..." 
+                        rows={3}
+                        className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-xs text-white placeholder:text-zinc-600 focus:border-lime-500 focus:ring-1 focus:ring-lime-500/50 outline-none transition-all resize-none font-medium whitespace-pre-wrap break-words"
+                    />
+                </div>
+
+                {/* Pesos */}
+                <div className="grid grid-cols-2 gap-3 bg-black/30 p-3 rounded-xl border border-white/5">
                     <div>
-                        <label className="text-[10px] text-slate-500 font-bold block">IDADE</label>
-                        <select value={ageRange} onChange={e => setAgeRange(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white"><option value="18-25">18-25</option><option value="26-35">26-35</option><option value="36-45">36-45</option><option value="+45">+45</option></select>
+                        <label className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1 block">Peso Antes</label>
+                        <input type="number" value={weightBefore} onChange={e => setWeightBefore(e.target.value)} className="w-full bg-transparent border-b border-zinc-700 p-1 text-sm font-bold text-white focus:border-lime-500 outline-none text-center" placeholder="00.0" />
                     </div>
                     <div>
-                        <label className="text-[10px] text-slate-500 font-bold block">TREINOS</label>
-                        <select value={frequency} onChange={e => setFrequency(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white"><option value="3x">3x</option><option value="4x">4x</option><option value="5x">5x</option><option value="6x">6x</option></select>
+                        <label className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1 block">Peso Atual</label>
+                        <input type="number" value={weightAfter} onChange={e => setWeightAfter(e.target.value)} className="w-full bg-transparent border-b border-zinc-700 p-1 text-sm font-bold text-lime-400 focus:border-lime-500 outline-none text-center" placeholder="00.0" />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="text-[10px] text-blue-400 font-bold block">FASE</label>
-                        <select value={phase} onChange={e => setPhase(e.target.value)} className="w-full bg-slate-950 border border-blue-900/50 rounded p-1.5 text-xs text-white"><option value="cutting">Cutting</option><option value="bulking">Bulking</option><option value="manutencao">Manutenção</option></select>
+                        <label className="text-[10px] text-zinc-400 font-bold block mb-1 uppercase">Fase</label>
+                        <select value={phase} onChange={e => setPhase(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-lime-500 font-bold uppercase cursor-pointer">
+                            <option value="emagrecimento">Emagrecimento</option>
+                            <option value="hipertrofia">Hipertrofia</option>
+                            <option value="definicao">Definição</option>
+                            <option value="manutencao">Manutenção</option>
+                        </select>
                     </div>
                     <div>
-                         <label className="text-[10px] text-slate-500 font-bold block">DIETA</label>
-                        <select value={diet} onChange={e => setDiet(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white"><option value="100%">100%</option><option value="80_20">80/20</option><option value="off">Off</option></select>
-                    </div>
-                </div>
-
-                {/* NOVOS INPUTS: CALORIAS E CARDIO */}
-                <div className="space-y-3 pt-2 border-t border-slate-800">
-                    <div>
-                        <label className="text-[10px] text-blue-400 font-bold flex items-center gap-1 mb-1">
-                            <span className="bg-blue-900/30 p-1 rounded"><Flame size={10}/></span> 
-                            INGESTÃO CALÓRICA (DIETA)
-                        </label>
-                        <input value={calories} onChange={e => setCalories(e.target.value)} placeholder="Ex: 2500 kcal" className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white placeholder:text-slate-600 focus:border-blue-500 outline-none transition-colors" />
-                    </div>
-                    <div>
-                        <label className="text-[10px] text-purple-400 font-bold flex items-center gap-1 mb-1">
-                            <span className="bg-purple-900/30 p-1 rounded"><Activity size={10}/></span> 
-                            PROTOCOLO DE CARDIO
-                        </label>
-                        <input value={cardio} onChange={e => setCardio(e.target.value)} placeholder="Ex: 30min pós-treino" className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white placeholder:text-slate-600 focus:border-purple-500 outline-none transition-colors" />
+                         <label className="text-[10px] text-zinc-400 font-bold block mb-1 uppercase">Dieta</label>
+                        <select value={diet} onChange={e => setDiet(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-lime-500 font-bold uppercase cursor-pointer">
+                            <option value="100%">100% Foco</option>
+                            <option value="80_20">80/20</option>
+                            <option value="70_30">70/30 (Flexível)</option>
+                            <option value="off">Off Season</option>
+                        </select>
                     </div>
                 </div>
 
-                <div className="pt-2">
-                    <label className="text-[10px] text-slate-500 font-bold block">LESÕES</label>
-                    <input value={injuries} onChange={e => setInjuries(e.target.value)} placeholder="Ex: Joelho..." className="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white" />
+                {/* CALORIAS (SELETOR) */}
+                <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-400 font-bold flex items-center gap-2 mb-1 uppercase tracking-wider">
+                        <Flame size={12} className="text-orange-500"/> Ingestão Calórica
+                    </label>
+                    <select value={calorieRange} onChange={e => setCalorieRange(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-lime-500 font-bold uppercase cursor-pointer">
+                        <option value="1200-1500">1200 a 1500 kcal</option>
+                        <option value="1500-1800">1500 a 1800 kcal</option>
+                        <option value="1800-2100">1800 a 2100 kcal</option>
+                        <option value="2100-2500">2100 a 2500 kcal</option>
+                        <option value="2500-3000">2500 a 3000 kcal</option>
+                        <option value="+3000">Acima de 3000 kcal</option>
+                    </select>
+                </div>
+
+                {/* CARDIO COMPLETO */}
+                <div className="space-y-2 bg-black/20 p-3 rounded-xl border border-white/5">
+                    <label className="text-[10px] text-zinc-400 font-bold flex items-center gap-2 mb-1 uppercase tracking-wider">
+                        <Activity size={12} className="text-blue-500"/> Cardio & Gasto
+                    </label>
+                    
+                    <div className="grid grid-cols-1 gap-2">
+                        <select value={cardioType} onChange={e => setCardioType(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-lg p-1.5 text-[10px] text-white focus:border-lime-500 font-bold uppercase cursor-pointer">
+                            <option value="nenhum">Não realiza cardio</option>
+                            <option value="esteira_caminhada">Esteira (Caminhada)</option>
+                            <option value="esteira_corrida">Esteira (Corrida)</option>
+                            <option value="rua">Corrida/Caminhada Rua</option>
+                            <option value="escada">Escada Ergométrica</option>
+                            <option value="eliptico">Elíptico / Transport</option>
+                            <option value="bike">Bike / Spinning</option>
+                        </select>
+
+                        {/* Só mostra intensidade se não for "nenhum" */}
+                        {cardioType !== "nenhum" && (
+                            <div className="flex gap-2">
+                                <select value={cardioIntensity} onChange={e => setCardioIntensity(e.target.value)} className="flex-1 bg-black/50 border border-white/10 rounded-lg p-1.5 text-[10px] text-white focus:border-lime-500 font-bold uppercase cursor-pointer">
+                                    <option value="leve">Leve</option>
+                                    <option value="moderada">Moderada</option>
+                                    <option value="alta">Alta Intensidade</option>
+                                </select>
+                                <select value={cardioBurn} onChange={e => setCardioBurn(e.target.value)} className="flex-1 bg-black/50 border border-white/10 rounded-lg p-1.5 text-[10px] text-white focus:border-lime-500 font-bold uppercase cursor-pointer">
+                                    <option value="100-200">100-200 kcal</option>
+                                    <option value="200-350">200-350 kcal</option>
+                                    <option value="350-500">350-500 kcal</option>
+                                    <option value="+500">+500 kcal</option>
+                                </select>
+                            </div>
+                        )}
+                    </div>
                 </div>
                 
                  <div>
-                    <label className="text-[10px] text-slate-500 font-bold block">TOM DO FEEDBACK</label>
-                    <select value={tone} onChange={e => setTone(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white"><option value="tecnico">Técnico</option><option value="acolhedor">Acolhedor</option><option value="pulso_firme">Pulso Firme</option></select>
+                    <label className="text-[10px] text-zinc-500 font-bold block mb-1 uppercase">Tom da Resposta</label>
+                    <select value={tone} onChange={e => setTone(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-lime-500 font-bold cursor-pointer"><option value="tecnico">Técnico (Biomecânico)</option><option value="acolhedor">Acolhedor (Motivador)</option><option value="pulso_firme">Pulso Firme (Exigente)</option></select>
                 </div>
             </div>
 
-            <button onClick={runAI} disabled={analyzing} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
-                {analyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={18}/> Gerar Análise</>}
+            <button onClick={runAI} disabled={analyzing} className="w-full bg-lime-500 hover:bg-lime-400 text-black font-black uppercase tracking-widest py-4 rounded-xl shadow-[0_0_30px_rgba(132,204,22,0.4)] hover:shadow-[0_0_50px_rgba(132,204,22,0.6)] transition-all flex items-center justify-center gap-2 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                {analyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={18}/> GERAR ANÁLISE IA</>}
             </button>
         </div>
 
-        {/* DIREITA: GRIDS (Upload Direto) (75%) */}
-        <div className="lg:col-span-9 space-y-8">
+        {/* DIREITA: FOTOS (70%) */}
+        <div className="lg:col-span-8 space-y-8 pb-10">
             <div className="print:hidden">
-                <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                    <PlusCircle size={20} className="text-blue-500"/> Upload & Comparação
-                    <span className="text-xs font-normal text-slate-500">(Clique nos quadros para abrir o arquivo)</span>
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {activePoses.map(pose => (
-                        <div key={pose} className="bg-slate-900 border border-slate-800 rounded-xl p-3">
-                            <h4 className="text-center text-[10px] font-bold text-slate-400 uppercase mb-2 border-b border-slate-800 pb-1">{pose}</h4>
-                            <div className="flex gap-2">
+                        <div key={pose} className="bg-zinc-900/80 border border-white/5 rounded-3xl p-5 hover:border-lime-500/20 transition-all duration-500">
+                            <h4 className="text-center text-[10px] font-black text-zinc-400 uppercase mb-4 tracking-[0.2em]">{pose}</h4>
+                            <div className="flex gap-4 items-start">
                                 
-                                {/* Slot ANTES (Upload) */}
-                                <label className={`flex-1 aspect-[3/4] bg-slate-950 rounded border-2 border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden hover:border-blue-500 hover:bg-blue-900/10 transition-all ${slots[pose].before ? 'border-blue-500 border-solid' : 'border-slate-800'}`}>
-                                    {slots[pose].before ? (
-                                        <>
-                                            <img src={slots[pose].before!} className="w-full h-full object-cover"/>
-                                            <div 
-                                                onClick={(e) => { e.preventDefault(); clearSlot(pose, 'before'); }} 
-                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 z-20 hover:bg-red-600"
-                                            >
-                                                <X size={12}/>
+                                {/* LADO ESQUERDO (ANTES) */}
+                                <div className="flex-1 space-y-2">
+                                    <label className={`block aspect-[3/4] bg-black/50 rounded-2xl border-2 border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden group hover:border-lime-500/50 transition-all ${slots[pose].before ? 'border-lime-500/30' : 'border-white/10'}`}>
+                                        {slots[pose].before ? (
+                                            <>
+                                                <img src={slots[pose].before!} className="w-full h-full object-cover"/>
+                                                <div onClick={(e) => { e.preventDefault(); clearSlot(pose, 'before'); }} className="absolute top-2 right-2 bg-black/80 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors"><X size={12}/></div>
+                                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur px-3 py-1 rounded-full text-[8px] font-black text-zinc-300 uppercase tracking-widest border border-white/10">Antes</div>
+                                            </>
+                                        ) : (
+                                            <div className="text-center group-hover:scale-110 transition-transform">
+                                                <Upload size={20} className="text-zinc-600 mx-auto mb-2 group-hover:text-lime-500 transition-colors"/>
+                                                <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest group-hover:text-white">Carregar</span>
                                             </div>
-                                        </>
-                                    ) : (
-                                        <div className="text-center">
-                                            <Upload size={20} className="text-slate-600 mx-auto mb-1"/>
-                                            <span className="text-[9px] text-slate-500 font-bold block">ANTES</span>
-                                        </div>
-                                    )}
-                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSlotUpload(e, pose, 'before')} />
-                                </label>
+                                        )}
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSlotUpload(e, pose, 'before')} />
+                                    </label>
+                                    
+                                    {/* DATA FORÇADA BRANCA */}
+                                    <div className="flex items-center gap-1 bg-black/30 border border-white/5 rounded-lg px-2 py-1">
+                                        <Calendar size={10} className="text-zinc-500"/>
+                                        {/* CSS INLINE PARA FORÇAR O ÍCONE BRANCO (INVERT) E COR DO TEXTO */}
+                                        <input 
+                                            type="date" 
+                                            value={dateBefore} 
+                                            onChange={e => setDateBefore(e.target.value)} 
+                                            className="bg-transparent text-[10px] text-zinc-300 w-full focus:outline-none uppercase font-bold text-center" 
+                                            style={{ colorScheme: "dark", filter: "invert(0)" }} 
+                                        />
+                                    </div>
+                                </div>
                                 
-                                {/* Seta */}
-                                <div className="flex items-center text-slate-700">➜</div>
+                                <ArrowLeft className="text-zinc-700 rotate-180 mt-20" size={24}/>
 
-                                {/* Slot DEPOIS (Upload) */}
-                                <label className={`flex-1 aspect-[3/4] bg-slate-950 rounded border-2 border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden hover:border-purple-500 hover:bg-purple-900/10 transition-all ${slots[pose].after ? 'border-purple-500 border-solid' : 'border-slate-800'}`}>
-                                    {slots[pose].after ? (
-                                        <>
-                                            <img src={slots[pose].after!} className="w-full h-full object-cover"/>
-                                            <div 
-                                                onClick={(e) => { e.preventDefault(); clearSlot(pose, 'after'); }} 
-                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 z-20 hover:bg-red-600"
-                                            >
-                                                <X size={12}/>
+                                {/* LADO DIREITO (DEPOIS) */}
+                                <div className="flex-1 space-y-2">
+                                    <label className={`block aspect-[3/4] bg-black/50 rounded-2xl border-2 border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden group hover:border-lime-500 transition-all ${slots[pose].after ? 'border-lime-500' : 'border-white/10'}`}>
+                                        {slots[pose].after ? (
+                                            <>
+                                                <img src={slots[pose].after!} className="w-full h-full object-cover"/>
+                                                <div onClick={(e) => { e.preventDefault(); clearSlot(pose, 'after'); }} className="absolute top-2 right-2 bg-black/80 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors"><X size={12}/></div>
+                                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-lime-500 text-black px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg shadow-lime-500/20">Hoje</div>
+                                            </>
+                                        ) : (
+                                            <div className="text-center group-hover:scale-110 transition-transform">
+                                                <Upload size={20} className="text-zinc-600 mx-auto mb-2 group-hover:text-lime-500 transition-colors"/>
+                                                <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest group-hover:text-white">Carregar</span>
                                             </div>
-                                        </>
-                                    ) : (
-                                        <div className="text-center">
-                                            <Upload size={20} className="text-slate-600 mx-auto mb-1"/>
-                                            <span className="text-[9px] text-slate-500 font-bold block">DEPOIS</span>
-                                        </div>
-                                    )}
-                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSlotUpload(e, pose, 'after')} />
-                                </label>
+                                        )}
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSlotUpload(e, pose, 'after')} />
+                                    </label>
+                                    <div className="flex items-center gap-1 bg-black/30 border border-white/5 rounded-lg px-2 py-1">
+                                        <Calendar size={10} className="text-lime-500"/>
+                                        <input 
+                                            type="date" 
+                                            value={dateAfter} 
+                                            onChange={e => setDateAfter(e.target.value)} 
+                                            className="bg-transparent text-[10px] text-lime-400 w-full focus:outline-none uppercase font-bold text-center" 
+                                            style={{ colorScheme: "dark", filter: "invert(0)" }}
+                                        />
+                                    </div>
+                                </div>
 
                             </div>
                         </div>
@@ -297,40 +376,53 @@ export default function ComparativoPage() {
                 </div>
             </div>
 
-            {/* RESULTADO */}
+            {/* RESULTADO (Relatório) */}
             {result && (
-                <div className="bg-slate-900 border border-slate-700 p-8 rounded-xl animate-in slide-in-from-bottom-4 print:bg-white print:border-none print:p-0 print:text-black">
-                    <div className="border-b border-slate-700 print:border-gray-300 pb-4 mb-6 flex justify-between items-start">
+                <div className="bg-zinc-900 border border-white/10 p-10 rounded-3xl animate-in slide-in-from-bottom-10 shadow-2xl print:bg-white print:border-none print:p-0 print:text-black relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-lime-500 via-emerald-500 to-lime-500"></div>
+                    
+                    <div className="border-b border-white/10 print:border-gray-300 pb-8 mb-8 flex justify-between items-start">
                         <div>
-                            <h2 className="text-2xl font-bold text-white print:text-black">Relatório de Evolução</h2>
-                            <p className="text-slate-400 print:text-gray-600">Atleta: {student?.full_name}</p>
-                            <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-slate-300 print:text-gray-500 uppercase font-bold">
-                                <span className="bg-blue-900/50 print:bg-gray-100 px-2 py-1 rounded border border-blue-900">Fase: {phase}</span>
-                                <span className="bg-slate-800 print:bg-gray-100 px-2 py-1 rounded">Kcal: {calories}</span>
-                                <span className="bg-slate-800 print:bg-gray-100 px-2 py-1 rounded">Cardio: {cardio}</span>
+                            <h2 className="text-4xl font-black text-white print:text-black uppercase italic tracking-tighter">Relatório de Evolução</h2>
+                            <p className="text-zinc-400 print:text-gray-600 font-bold text-sm mt-2 uppercase tracking-wide">Atleta: <span className="text-lime-500">{student?.full_name}</span></p>
+                            
+                            <div className="flex flex-wrap gap-2 mt-6">
+                                {weightBefore && weightAfter && (
+                                    <span className="bg-lime-500/10 text-lime-400 border border-lime-500/20 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                                        {weightBefore}kg ➜ {weightAfter}kg
+                                    </span>
+                                )}
+                                <span className="bg-black text-zinc-300 border border-white/10 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest">{phase}</span>
                             </div>
                         </div>
                         <div className="print:hidden">
-                            <button onClick={() => window.print()} className="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white"><Printer size={20}/></button>
+                            <button onClick={() => window.print()} className="p-3 bg-black hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-colors border border-white/10"><Printer size={20}/></button>
                         </div>
                     </div>
 
-                    <div className="prose prose-invert max-w-none print:prose-p:text-black print:prose-headings:text-black print:prose-strong:text-black">
+                    <div className="prose prose-invert prose-headings:font-black prose-headings:uppercase prose-headings:text-lime-400 prose-p:text-zinc-300 prose-strong:text-white max-w-none print:prose-p:text-black print:prose-headings:text-black print:prose-strong:text-black whitespace-pre-wrap break-words">
                         <ReactMarkdown>{result}</ReactMarkdown>
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-slate-800 print:border-gray-300 print:break-inside-avoid">
-                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Evidências Visuais</h4>
+                    {/* Evidências no Print */}
+                    <div className="mt-12 pt-8 border-t border-white/10 print:border-gray-300 print:break-inside-avoid">
+                        <h4 className="text-xs font-black text-zinc-500 uppercase mb-6 tracking-widest">Evidências Visuais</h4>
                         <div className="grid grid-cols-4 gap-4">
                             {activePoses.map(pose => {
                                 const s = slots[pose];
                                 if (!s.before || !s.after) return null;
                                 return (
-                                    <div key={pose} className="space-y-1">
-                                        <p className="text-[8px] text-center uppercase font-bold text-slate-500">{pose}</p>
+                                    <div key={pose} className="space-y-2">
+                                        <p className="text-[9px] text-center uppercase font-black text-zinc-600 tracking-widest">{pose}</p>
                                         <div className="flex gap-1">
-                                            <img src={s.before!} className="w-1/2 aspect-[3/4] object-cover rounded border border-slate-700 print:border-gray-300"/>
-                                            <img src={s.after!} className="w-1/2 aspect-[3/4] object-cover rounded border border-slate-700 print:border-gray-300"/>
+                                            <div className="w-1/2">
+                                                <img src={s.before!} className="w-full aspect-[3/4] object-cover rounded-lg border border-white/10 print:border-gray-300"/>
+                                                {dateBefore && <p className="text-[8px] text-center mt-1 text-zinc-500 print:text-black">{new Date(dateBefore).toLocaleDateString()}</p>}
+                                            </div>
+                                            <div className="w-1/2">
+                                                <img src={s.after!} className="w-full aspect-[3/4] object-cover rounded-lg border border-white/10 print:border-gray-300"/>
+                                                {dateAfter && <p className="text-[8px] text-center mt-1 text-zinc-500 print:text-black">{new Date(dateAfter).toLocaleDateString()}</p>}
+                                            </div>
                                         </div>
                                     </div>
                                 )

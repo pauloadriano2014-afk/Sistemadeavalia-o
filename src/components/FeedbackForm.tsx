@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquare, Check, Loader2 } from "lucide-react";
-import { saveFeedback } from "@/app/dashboard/alunos/actions";
+import { Save, Loader2, FileText } from "lucide-react";
+import { saveFeedback } from "@/app/dashboard/alunos/actions"; 
 
 interface FeedbackFormProps {
   checkinId: string;
@@ -11,59 +11,51 @@ interface FeedbackFormProps {
 }
 
 export default function FeedbackForm({ checkinId, studentId, initialFeedback }: FeedbackFormProps) {
-  const [isEditing, setIsEditing] = useState(!initialFeedback); // Se já tem feedback, começa fechado
+  const [feedback, setFeedback] = useState(initialFeedback || "");
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
+    
+    const formData = new FormData();
+    formData.append("checkinId", checkinId);
+    formData.append("studentId", studentId);
+    formData.append("feedback", feedback);
+
     await saveFeedback(formData);
+    
     setLoading(false);
-    setIsEditing(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
-  if (!isEditing && initialFeedback) {
-    return (
-      <div className="bg-blue-900/20 border border-blue-900/50 p-4 rounded-lg mt-4">
-        <div className="flex items-center gap-2 mb-2 text-blue-400 font-bold text-sm uppercase">
-          <MessageSquare size={16} /> Feedback do Coach
-        </div>
-        <p className="text-white text-sm whitespace-pre-wrap">{initialFeedback}</p>
-        <button 
-          onClick={() => setIsEditing(true)}
-          className="text-xs text-slate-500 hover:text-white mt-3 underline"
-        >
-          Editar avaliação
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <form action={handleSubmit} className="mt-4 animate-in fade-in">
-      <input type="hidden" name="checkinId" value={checkinId} />
-      <input type="hidden" name="studentId" value={studentId} />
-      
-      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
-        Sua Avaliação
-      </label>
+    <form onSubmit={handleSubmit} className="mt-2">
+      <div className="flex items-center justify-between mb-2">
+          <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase">
+            <FileText size={12} /> Anotações do Treinador (Privado)
+          </label>
+          {saved && <span className="text-[10px] text-emerald-600 font-bold animate-pulse">✓ Salvo!</span>}
+      </div>
       
       <textarea 
-        name="feedback"
-        defaultValue={initialFeedback}
-        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none placeholder:text-slate-600"
+        value={feedback}
+        onChange={(e) => setFeedback(e.target.value)}
+        className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-gray-700 text-sm focus:bg-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 focus:outline-none placeholder:text-gray-400 resize-none transition-all"
         rows={3}
-        placeholder="Escreva aqui o feedback para o aluno (ex: Aprovado, mude a dieta, etc)..."
-        required
+        placeholder="Anote aqui observações técnicas para consultar depois..."
       />
 
       <div className="flex justify-end mt-2">
         <button 
           type="submit" 
-          disabled={loading}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50 transition-colors"
+          disabled={loading || feedback === initialFeedback}
+          className="bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-purple-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors border border-gray-200"
         >
-          {loading ? <Loader2 size={16} className="animate-spin"/> : <Check size={16}/>}
-          {initialFeedback ? "Atualizar Feedback" : "Enviar Avaliação"}
+          {loading ? <Loader2 size={14} className="animate-spin"/> : <Save size={14}/>}
+          {loading ? "Salvando..." : "Salvar Anotação"}
         </button>
       </div>
     </form>

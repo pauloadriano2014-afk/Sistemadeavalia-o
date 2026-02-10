@@ -3,7 +3,6 @@
 import { login } from "@/app/login/actions";
 import { useState } from "react";
 import { Loader2, Lock, Mail, Dumbbell } from "lucide-react";
-import Link from "next/link"; // Adicionado Link
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -12,11 +11,7 @@ export default function LoginPage() {
   const handleSubmit = async (formData: FormData) => {
     setLoading(true);
     setError("");
-    
     const result = await login(formData);
-    
-    // Se a action retornar um objeto com erro, exibimos.
-    // Se der sucesso, ela faz o redirect e a página muda.
     if (result?.error) {
       setError(result.error);
       setLoading(false);
@@ -24,55 +19,61 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      {/* Efeito de fundo Neon sutil */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-lime-900/20 blur-[120px] opacity-30"></div>
+        <div className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-lime-900/20 blur-[120px] opacity-30"></div>
+      </div>
+
+      <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500 relative z-10">
         
         {/* Logo / Cabeçalho */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600/20 text-blue-500 mb-4 ring-1 ring-blue-600/50 shadow-[0_0_30px_-5px_rgba(37,99,235,0.3)]">
-            <Dumbbell size={32} />
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-zinc-900 border border-zinc-800 text-lime-500 mb-4 shadow-lg shadow-lime-900/20 group hover:border-lime-500 transition-all duration-500">
+            <Dumbbell size={40} className="group-hover:scale-110 transition-transform duration-500" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
-            Painel do Treinador
+          <h1 className="text-4xl font-extrabold text-white tracking-tight">
+            COACH <span className="text-lime-400">PRO</span>
           </h1>
-          <p className="text-slate-400">
-            Acesso administrativo exclusivo.
+          <p className="text-zinc-400 text-sm uppercase tracking-widest font-bold">
+            Sistema de Alta Performance
           </p>
         </div>
 
-        {/* Formulário de Login */}
-        <form action={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-6 shadow-xl">
+        {/* Formulário */}
+        <form action={handleSubmit} className="bg-zinc-950/50 backdrop-blur-md border border-zinc-900 rounded-2xl p-8 space-y-6 shadow-2xl">
           
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-200 text-center font-medium">
-              {error}
+            <div className="p-4 bg-red-950/50 border border-red-900/50 rounded-lg text-sm text-red-400 text-center font-bold flex items-center justify-center gap-2">
+             ⚠️ {error}
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Email</label>
+              <label className="block text-[10px] font-black text-zinc-500 uppercase mb-2 ml-1 tracking-widest">Email de Acesso</label>
               <div className="relative group">
-                <Mail className="absolute left-3 top-3.5 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={18} />
+                <Mail className="absolute left-4 top-4 text-zinc-500 group-focus-within:text-lime-400 transition-colors duration-300" size={20} />
                 <input 
                   name="email" 
                   type="email" 
                   required 
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
-                  placeholder="admin@email.com"
+                  className="w-full bg-black border border-zinc-800 rounded-xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-lime-500/50 focus:border-lime-500 transition-all duration-300"
+                  placeholder="seumail@treinador.com"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Senha</label>
+              <label className="block text-[10px] font-black text-zinc-500 uppercase mb-2 ml-1 tracking-widest">Sua Senha</label>
               <div className="relative group">
-                <Lock className="absolute left-3 top-3.5 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={18} />
+                <Lock className="absolute left-4 top-4 text-zinc-500 group-focus-within:text-lime-400 transition-colors duration-300" size={20} />
                 <input 
                   name="password" 
                   type="password" 
                   required 
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                  className="w-full bg-black border border-zinc-800 rounded-xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-lime-500/50 focus:border-lime-500 transition-all duration-300"
                   placeholder="••••••••"
                 />
               </div>
@@ -82,24 +83,14 @@ export default function LoginPage() {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
+            className="w-full bg-lime-500 hover:bg-lime-400 text-black font-black uppercase tracking-wider py-4 rounded-xl transition-all duration-300 shadow-lg shadow-lime-500/20 hover:shadow-lime-500/40 flex items-center justify-center gap-3 scale-100 hover:scale-[1.02] active:scale-95"
           >
-            {loading ? <Loader2 size={20} className="animate-spin" /> : "Entrar no Sistema"}
+            {loading ? <Loader2 size={24} className="animate-spin" /> : "Entrar no Painel ➜"}
           </button>
         </form>
 
-        {/* --- ADICIONEI ESTE BLOCO ABAIXO PARA O LINK DE CADASTRO --- */}
-        <div className="text-center">
-            <p className="text-sm text-slate-400">
-                Ainda não tem conta?{" "}
-                <Link href="/cadastro" className="text-blue-500 hover:text-blue-400 font-bold transition-colors">
-                    Cadastre-se aqui
-                </Link>
-            </p>
-        </div>
-
-        <p className="text-center text-xs text-slate-500 pt-4">
-          &copy; 2026 Sistema de Consultoria
+        <p className="text-center text-xs text-zinc-600 font-bold uppercase tracking-widest">
+          Fitness SaaS © 2026
         </p>
       </div>
     </div>

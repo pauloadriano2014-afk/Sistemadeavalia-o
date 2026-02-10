@@ -11,13 +11,16 @@ export interface CompareContext {
   frequency: string;
   injuries: string;
   tone: string;
+  
+  // NOVOS CAMPOS
   goal: string;
-  phase: string;
-  sleep: string;
-  dietCompliance: string;
-  // AJUSTE AQUI: Nomes mais claros
-  ingestedCalories: string; // Ex: "2500kcal (Dieta)"
-  cardioProtocol: string; // Ex: "30min TSD (Gasto)"
+  phase: string; // Emagrecimento, Hipertrofia, Definição, Manutenção
+  dietCompliance: string; // 100%, 80/20, 70/30...
+  ingestedCalories: string; 
+  cardioProtocol: string; 
+  weightBefore: string; // Novo
+  weightAfter: string;  // Novo
+  coachContext: string; // Novo: "Saiu de um bulking..."
 }
 
 export interface ImagePair {
@@ -45,41 +48,46 @@ export async function analyzeEvolution(pairs: ImagePair[], ctx: CompareContext) 
     }
 
     let toneInstruction = "";
-    if (ctx.tone === "acolhedor") toneInstruction = "Seja empático e motivador.";
-    else if (ctx.tone === "tecnico") toneInstruction = "Seja analítico (foco em biomecânica).";
-    else toneInstruction = "Seja 'pulso firme' e exigente.";
+    if (ctx.tone === "acolhedor") toneInstruction = "Seja empático, motivador e celebre pequenas vitórias.";
+    else if (ctx.tone === "tecnico") toneInstruction = "Seja cirúrgico, use termos biomecânicos e foque em proporção/simetria.";
+    else toneInstruction = "Seja direto, exigente e foque em resultados ('pulso firme').";
 
     const prompt = `
-      ATUE COMO UM TREINADOR EXPERT.
+      ATUE COMO UM TREINADOR DE FISICULTURISMO DE ELITE (COACH).
+      Você está analisando a evolução de um atleta.
       
       ## 📋 DADOS DO ATLETA
       - Nome: ${ctx.name} (${ctx.gender})
       - Idade: ${ctx.age} | Treino: ${ctx.frequency}
       - Lesões: ${ctx.injuries || "Nenhuma"}
       
-      ## 🥗 BALANÇO ENERGÉTICO (CRUCIAL)
-      - FASE: ${ctx.phase.toUpperCase()}
-      - INGESTÃO CALÓRICA (DIETA): ${ctx.ingestedCalories}
-      - PROTOCOLO DE CARDIO: ${ctx.cardioProtocol}
-      - ADESÃO À DIETA: ${ctx.dietCompliance}
-      - SONO: ${ctx.sleep}
+      ## 🔄 CONTEXTO DA EVOLUÇÃO (MUITO IMPORTANTE)
+      - **FASE ATUAL:** ${ctx.phase.toUpperCase()}
+      - **CONTEXTO DO COACH:** "${ctx.coachContext}" (Use isso para balizar sua análise. Se o coach disse que ele não se adaptou, verifique os sinais disso).
+      
+      ## 📊 DADOS QUANTITATIVOS
+      - Peso Inicial: ${ctx.weightBefore}kg -> Peso Atual: ${ctx.weightAfter}kg
+      - Calorias: ${ctx.ingestedCalories}
+      - Cardio: ${ctx.cardioProtocol}
+      - Adesão à Dieta: ${ctx.dietCompliance}
 
       ## 🎭 TOM DE VOZ: ${toneInstruction}
 
-      ## 📸 IMAGENS
+      ## 📸 IMAGENS ENVIADAS
       ${imageDescription}
 
       ## 🧠 ANÁLISE REQUERIDA
-      1. Verifique se o físico condiz com a Ingestão de ${ctx.ingestedCalories} e o Cardio de ${ctx.cardioProtocol}.
-         Ex: Se come pouco e faz muito cardio, deveria estar secando rápido. Se não está, aponte possível erro na adesão ou metabolismo.
-      2. Analise a evolução muscular e de gordura em cada pose.
+      1. **Correlação Visual x Balança:** O peso mudou de ${ctx.weightBefore} para ${ctx.weightAfter}. O visual condiz? (Ex: Se peso caiu e definição aumentou, ótimo. Se peso caiu e ficou "flat"/murcho, alertar).
+      2. **Análise por Grupo Muscular:** Compare cada pose. Onde houve ganho real? Onde houve perda de gordura?
+      3. **Feedback sobre a Fase:** Para a fase de ${ctx.phase}, o resultado está satisfatório?
 
-      ## ESTRUTURA (Markdown):
+      ## ESTRUTURA DE RESPOSTA (Markdown Bonito):
+      Use emojis para tópicos.
       # Relatório de Evolução 🚀
-      ## 1. Diagnóstico da Fase (${ctx.phase})
-      ## 2. Análise por Pose
-      ## 3. Pontos Fortes vs Fracos
-      ## 4. Veredito Final
+      ## 1. Diagnóstico Geral (Peso & Contexto)
+      ## 2. Análise Visual (Pose a Pose)
+      ## 3. Pontos de Atenção (O que melhorar)
+      ## 4. Veredito Final & Ajuste Sugerido
     `;
 
     const generatedContent = await model.generateContent([prompt, ...imageParts]);
@@ -89,6 +97,6 @@ export async function analyzeEvolution(pairs: ImagePair[], ctx: CompareContext) 
 
   } catch (error: any) {
     console.error("Erro IA:", error);
-    return { error: "Erro ao processar. Tente enviar menos fotos." };
+    return { error: "Erro ao processar. Tente enviar imagens menores ou em menor quantidade." };
   }
 }

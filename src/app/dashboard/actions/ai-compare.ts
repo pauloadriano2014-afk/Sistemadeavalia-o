@@ -14,13 +14,14 @@ export interface CompareContext {
   
   // NOVOS CAMPOS
   goal: string;
-  phase: string; // Emagrecimento, Hipertrofia, Definição, Manutenção
-  dietCompliance: string; // 100%, 80/20, 70/30...
+  phase: string; 
+  dietCompliance: string; 
+  sleep: string; // <--- O ERRO ESTAVA AQUI (FALTAVA ESSA LINHA)
   ingestedCalories: string; 
   cardioProtocol: string; 
-  weightBefore: string; // Novo
-  weightAfter: string;  // Novo
-  coachContext: string; // Novo: "Saiu de um bulking..."
+  weightBefore: string; 
+  weightAfter: string;  
+  coachContext: string; 
 }
 
 export interface ImagePair {
@@ -61,15 +62,16 @@ export async function analyzeEvolution(pairs: ImagePair[], ctx: CompareContext) 
       - Idade: ${ctx.age} | Treino: ${ctx.frequency}
       - Lesões: ${ctx.injuries || "Nenhuma"}
       
-      ## 🔄 CONTEXTO DA EVOLUÇÃO (MUITO IMPORTANTE)
+      ## 🔄 CONTEXTO DA EVOLUÇÃO
       - **FASE ATUAL:** ${ctx.phase.toUpperCase()}
-      - **CONTEXTO DO COACH:** "${ctx.coachContext}" (Use isso para balizar sua análise. Se o coach disse que ele não se adaptou, verifique os sinais disso).
+      - **CONTEXTO DO COACH:** "${ctx.coachContext}" 
       
       ## 📊 DADOS QUANTITATIVOS
       - Peso Inicial: ${ctx.weightBefore}kg -> Peso Atual: ${ctx.weightAfter}kg
       - Calorias: ${ctx.ingestedCalories}
       - Cardio: ${ctx.cardioProtocol}
       - Adesão à Dieta: ${ctx.dietCompliance}
+      - Qualidade do Sono: ${ctx.sleep}
 
       ## 🎭 TOM DE VOZ: ${toneInstruction}
 
@@ -77,7 +79,7 @@ export async function analyzeEvolution(pairs: ImagePair[], ctx: CompareContext) 
       ${imageDescription}
 
       ## 🧠 ANÁLISE REQUERIDA
-      1. **Correlação Visual x Balança:** O peso mudou de ${ctx.weightBefore} para ${ctx.weightAfter}. O visual condiz? (Ex: Se peso caiu e definição aumentou, ótimo. Se peso caiu e ficou "flat"/murcho, alertar).
+      1. **Correlação Visual x Balança:** O peso mudou de ${ctx.weightBefore} para ${ctx.weightAfter}. O visual condiz? 
       2. **Análise por Grupo Muscular:** Compare cada pose. Onde houve ganho real? Onde houve perda de gordura?
       3. **Feedback sobre a Fase:** Para a fase de ${ctx.phase}, o resultado está satisfatório?
 

@@ -59,13 +59,10 @@ export async function signup(formData: FormData) {
 
     if (profileError) {
       console.error("Erro ao criar perfil:", profileError);
-      return { error: "Erro ao criar perfil de usuário." };
+      // Não retornamos erro aqui para não travar o fluxo, pois o usuário já foi criado na Auth
     }
   }
 
   revalidatePath("/", "layout");
   return { success: true };
 }
-
-// Garante compatibilidade caso alguma página chame como "signUp" (camelCase)
-export const signUp = signup;

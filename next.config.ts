@@ -1,21 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // 1. Ignora erros de TypeScript no build (O Salvador da Pátria)
+  // 1. Ignora erros de TypeScript (Isso ainda funciona e salva vidas)
   typescript: {
     ignoreBuildErrors: true,
   },
-  // 2. Ignora erros de Linting no build
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  // 3. Limite de upload
+  // 2. Limite de upload
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
     },
   },
-  // 4. Imagens do Supabase
+  // 3. Imagens do Supabase
   images: {
     remotePatterns: [
       {

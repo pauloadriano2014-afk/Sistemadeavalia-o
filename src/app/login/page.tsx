@@ -1,6 +1,6 @@
 "use client";
 
-import { login, signup } from "./actions";
+import { login, signup } from "./auth";
 import { Loader2, Dumbbell, Mail, Lock, AlertCircle } from "lucide-react";
 import { useState } from "react";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { login } from "@/app/login/auth-service";
+import { login } from "@/app/acesso/auth-service";
 import { useState } from "react";
 import { Loader2, Lock, Mail, Dumbbell } from "lucide-react";
 

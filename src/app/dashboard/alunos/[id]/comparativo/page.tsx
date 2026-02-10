@@ -9,10 +9,11 @@ import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
 import imageCompression from 'browser-image-compression';
 
+// TEMPLATES CORRIGIDOS PARA PORTUGUÊS
 const POSE_TEMPLATES: any = {
     'emagrecimento': ['Frente', 'Perfil', 'Costas'],
-    'hipertrofia_female': ['Frente', 'Perfil', 'Costas', 'Pernas', 'Glúteos'],
-    'hipertrofia_male': ['Frente', 'Perfil', 'Costas', 'Duplo Bíceps (F)', 'Duplo Bíceps (C)'],
+    'hipertrofia_feminino': ['Frente', 'Perfil', 'Costas', 'Pernas', 'Glúteos'],
+    'hipertrofia_masculino': ['Frente', 'Perfil', 'Costas', 'Duplo Bíceps (F)', 'Duplo Bíceps (C)'],
     'classic': ['Frente', 'Costas', 'Duplo Bíceps (F)', 'Vacuum'],
     'bodybuilding': ['Frente', 'Costas', 'Most Muscular', 'Abs e Coxa'],
     'wellness': ['Frente', 'Costas', 'Perfil Dir.', 'Perfil Esq.'],
@@ -67,7 +68,11 @@ export default function ComparativoPage() {
 
       let templateKey = 'default';
       const goal = profile.selected_goal || 'emagrecimento';
-      const gender = profile.gender || 'female';
+      const rawGender = profile.gender?.toLowerCase() || 'female';
+
+      // --- CORREÇÃO DO GÊNERO AQUI TAMBÉM ---
+      let gender = 'feminino';
+      if (rawGender === 'male' || rawGender === 'masculino') gender = 'masculino';
 
       if (goal === 'emagrecimento') templateKey = 'emagrecimento';
       else if (goal === 'hipertrofia') templateKey = `hipertrofia_${gender}`;
@@ -152,28 +157,25 @@ export default function ComparativoPage() {
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black text-white pb-20 print:bg-white print:p-0">
       
-      {/* HEADER CORRIGIDO PARA NÃO VAZAR */}
-<div className="w-full max-w-7xl mx-auto px-6 py-6 mb-8 border-b border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-0 bg-black/90 backdrop-blur-md z-50 print:hidden">
-    
-    {/* Botão Voltar */}
-    <Link href={`/dashboard/alunos/${studentId}`} className="text-zinc-400 hover:text-lime-400 flex items-center gap-2 font-bold uppercase tracking-wider text-xs transition-colors shrink-0 group">
-        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
-        <span>Voltar ao Prontuário</span>
-    </Link>
+      {/* HEADER */}
+        <div className="w-full max-w-7xl mx-auto px-6 py-6 mb-8 border-b border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-0 bg-black/90 backdrop-blur-md z-50 print:hidden">
+            <Link href={`/dashboard/alunos/${studentId}`} className="text-zinc-400 hover:text-lime-400 flex items-center gap-2 font-bold uppercase tracking-wider text-xs transition-colors shrink-0 group">
+                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
+                <span>Voltar ao Prontuário</span>
+            </Link>
 
-    {/* Título Principal - Agora com quebra inteligente e sem overflow */}
-    <div className="flex flex-wrap items-center gap-2 md:gap-3 text-right">
-        <div className="flex items-center gap-2">
-            <Sparkles className="text-lime-500 shrink-0" size={20} /> 
-            <h1 className="text-lg md:text-2xl font-black text-white uppercase italic tracking-tighter leading-none">
-                Comparativo IA
-            </h1>
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 text-right">
+                <div className="flex items-center gap-2">
+                    <Sparkles className="text-lime-500 shrink-0" size={20} /> 
+                    <h1 className="text-lg md:text-2xl font-black text-white uppercase italic tracking-tighter leading-none">
+                        Comparativo IA
+                    </h1>
+                </div>
+                <span className="bg-lime-500/10 border border-lime-500/20 text-lime-400 px-2 py-0.5 rounded text-[10px] md:text-xs font-black uppercase tracking-widest leading-none">
+                    PRO 4.0
+                </span>
+            </div>
         </div>
-        <span className="bg-lime-500/10 border border-lime-500/20 text-lime-400 px-2 py-0.5 rounded text-[10px] md:text-xs font-black uppercase tracking-widest leading-none">
-            PRO 4.0
-        </span>
-    </div>
-</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 px-6">
         
@@ -310,32 +312,31 @@ export default function ComparativoPage() {
                                 {/* LADO ESQUERDO (ANTES) */}
                                 <div className="flex-1 space-y-2">
                                     <label className={`block aspect-[3/4] bg-black/50 rounded-2xl border-2 border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden group hover:border-lime-500/50 transition-all ${slots[pose].before ? 'border-lime-500/30' : 'border-white/10'}`}>
-                                        {slots[pose].before ? (
-                                            <>
-                                                <img src={slots[pose].before!} className="w-full h-full object-cover"/>
-                                                <div onClick={(e) => { e.preventDefault(); clearSlot(pose, 'before'); }} className="absolute top-2 right-2 bg-black/80 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors"><X size={12}/></div>
-                                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur px-3 py-1 rounded-full text-[8px] font-black text-zinc-300 uppercase tracking-widest border border-white/10">Antes</div>
-                                            </>
-                                        ) : (
-                                            <div className="text-center group-hover:scale-110 transition-transform">
-                                                <Upload size={20} className="text-zinc-600 mx-auto mb-2 group-hover:text-lime-500 transition-colors"/>
-                                                <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest group-hover:text-white">Carregar</span>
-                                            </div>
-                                        )}
-                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSlotUpload(e, pose, 'before')} />
+                                            {slots[pose].before ? (
+                                                <>
+                                                    <img src={slots[pose].before!} className="w-full h-full object-cover"/>
+                                                    <div onClick={(e) => { e.preventDefault(); clearSlot(pose, 'before'); }} className="absolute top-2 right-2 bg-black/80 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors"><X size={12}/></div>
+                                                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur px-3 py-1 rounded-full text-[8px] font-black text-zinc-300 uppercase tracking-widest border border-white/10">Antes</div>
+                                                </>
+                                            ) : (
+                                                <div className="text-center group-hover:scale-110 transition-transform">
+                                                    <Upload size={20} className="text-zinc-600 mx-auto mb-2 group-hover:text-lime-500 transition-colors"/>
+                                                    <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest group-hover:text-white">Carregar</span>
+                                                </div>
+                                            )}
+                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSlotUpload(e, pose, 'before')} />
                                     </label>
                                     
                                     {/* DATA FORÇADA BRANCA */}
                                     <div className="flex items-center gap-1 bg-black/30 border border-white/5 rounded-lg px-2 py-1">
-                                        <Calendar size={10} className="text-zinc-500"/>
-                                        {/* CSS INLINE PARA FORÇAR O ÍCONE BRANCO (INVERT) E COR DO TEXTO */}
-                                        <input 
-                                            type="date" 
-                                            value={dateBefore} 
-                                            onChange={e => setDateBefore(e.target.value)} 
-                                            className="bg-transparent text-[10px] text-zinc-300 w-full focus:outline-none uppercase font-bold text-center" 
-                                            style={{ colorScheme: "dark", filter: "invert(0)" }} 
-                                        />
+                                            <Calendar size={10} className="text-zinc-500"/>
+                                            <input 
+                                                type="date" 
+                                                value={dateBefore} 
+                                                onChange={e => setDateBefore(e.target.value)} 
+                                                className="bg-transparent text-[10px] text-zinc-300 w-full focus:outline-none uppercase font-bold text-center" 
+                                                style={{ colorScheme: "dark", filter: "invert(0)" }} 
+                                            />
                                     </div>
                                 </div>
                                 
@@ -344,29 +345,29 @@ export default function ComparativoPage() {
                                 {/* LADO DIREITO (DEPOIS) */}
                                 <div className="flex-1 space-y-2">
                                     <label className={`block aspect-[3/4] bg-black/50 rounded-2xl border-2 border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden group hover:border-lime-500 transition-all ${slots[pose].after ? 'border-lime-500' : 'border-white/10'}`}>
-                                        {slots[pose].after ? (
-                                            <>
-                                                <img src={slots[pose].after!} className="w-full h-full object-cover"/>
-                                                <div onClick={(e) => { e.preventDefault(); clearSlot(pose, 'after'); }} className="absolute top-2 right-2 bg-black/80 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors"><X size={12}/></div>
-                                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-lime-500 text-black px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg shadow-lime-500/20">Hoje</div>
-                                            </>
-                                        ) : (
-                                            <div className="text-center group-hover:scale-110 transition-transform">
-                                                <Upload size={20} className="text-zinc-600 mx-auto mb-2 group-hover:text-lime-500 transition-colors"/>
-                                                <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest group-hover:text-white">Carregar</span>
-                                            </div>
-                                        )}
-                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSlotUpload(e, pose, 'after')} />
+                                            {slots[pose].after ? (
+                                                <>
+                                                    <img src={slots[pose].after!} className="w-full h-full object-cover"/>
+                                                    <div onClick={(e) => { e.preventDefault(); clearSlot(pose, 'after'); }} className="absolute top-2 right-2 bg-black/80 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors"><X size={12}/></div>
+                                                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-lime-500 text-black px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg shadow-lime-500/20">Hoje</div>
+                                                </>
+                                            ) : (
+                                                <div className="text-center group-hover:scale-110 transition-transform">
+                                                    <Upload size={20} className="text-zinc-600 mx-auto mb-2 group-hover:text-lime-500 transition-colors"/>
+                                                    <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest group-hover:text-white">Carregar</span>
+                                                </div>
+                                            )}
+                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSlotUpload(e, pose, 'after')} />
                                     </label>
                                     <div className="flex items-center gap-1 bg-black/30 border border-white/5 rounded-lg px-2 py-1">
-                                        <Calendar size={10} className="text-lime-500"/>
-                                        <input 
-                                            type="date" 
-                                            value={dateAfter} 
-                                            onChange={e => setDateAfter(e.target.value)} 
-                                            className="bg-transparent text-[10px] text-lime-400 w-full focus:outline-none uppercase font-bold text-center" 
-                                            style={{ colorScheme: "dark", filter: "invert(0)" }}
-                                        />
+                                            <Calendar size={10} className="text-lime-500"/>
+                                            <input 
+                                                type="date" 
+                                                value={dateAfter} 
+                                                onChange={e => setDateAfter(e.target.value)} 
+                                                className="bg-transparent text-[10px] text-lime-400 w-full focus:outline-none uppercase font-bold text-center" 
+                                                style={{ colorScheme: "dark", filter: "invert(0)" }}
+                                            />
                                     </div>
                                 </div>
 

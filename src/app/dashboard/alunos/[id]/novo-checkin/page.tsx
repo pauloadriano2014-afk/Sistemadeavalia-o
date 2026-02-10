@@ -38,11 +38,11 @@ export default function CoachCheckinPage() {
       let gender = student?.gender;
 
       if (['classic', 'bodybuilding', 'competicao_men'].includes(goal)) {
-        gender = 'male';
+        gender = 'masculino';
       } else if (['wellness', 'bikini', 'competicao_women'].includes(goal)) {
-        gender = 'female';
+        gender = 'feminino';
       }
-      if (!gender) gender = 'female';
+      if (!gender) gender = 'feminino';
 
       setStudentOriginalGoal(goal);
       setStudentGender(gender);
@@ -113,8 +113,8 @@ export default function CoachCheckinPage() {
               </h1>
               <p className="text-zinc-500 text-sm flex items-center gap-2 font-bold mt-1">
                   <span className="opacity-70 uppercase text-[10px] tracking-widest">Atleta:</span> 
-                  <span className={`font-black px-2 py-0.5 rounded uppercase text-[10px] border ${studentGender === 'male' ? 'bg-blue-950/30 border-blue-900 text-blue-400' : 'bg-pink-950/30 border-pink-900 text-pink-400'}`}>
-                      {studentGender === 'male' ? 'Masculino' : 'Feminino'}
+                  <span className={`font-black px-2 py-0.5 rounded uppercase text-[10px] border ${studentGender === 'masculino' ? 'bg-blue-950/30 border-blue-900 text-blue-400' : 'bg-pink-950/30 border-pink-900 text-pink-400'}`}>
+                      {studentGender === 'masculino' ? 'Masculino' : 'Feminino'}
                   </span>
               </p>
               </div>
@@ -183,7 +183,7 @@ export default function CoachCheckinPage() {
                       <PhotoInput label="Frente" name="photo_front" />
                       <PhotoInput label="Costas" name="photo_back" />
                       <PhotoInput label="Perfil" name="photo_side" />
-                      {studentGender === 'male' && (
+                      {studentGender === 'masculino' && (
                           <>
                               <PhotoInput label="D. Bíceps (F)" name="photo_front_double_biceps" />
                               <PhotoInput label="D. Bíceps (C)" name="photo_back_double_biceps" />

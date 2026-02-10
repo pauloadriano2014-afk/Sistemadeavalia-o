@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import Link from "next/link";
 import { Dumbbell, LogOut, Settings } from "lucide-react";
+import { signOutAction } from "@/app/auth/actions"; // <--- 1. IMPORTAMOS A AÇÃO
 
 export default async function Navbar() {
   const supabase = await createClient();
@@ -17,7 +18,7 @@ export default async function Navbar() {
   return (
     <nav className="border-b border-zinc-900 bg-black/90 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-20 items-center"> {/* Aumentei altura da barra */}
+        <div className="flex justify-between h-20 items-center">
           
           {/* LOGO */}
           <div className="flex items-center gap-8">
@@ -25,15 +26,13 @@ export default async function Navbar() {
               {profile.logo_url ? (
                  /* eslint-disable-next-line @next/next/no-img-element */
                  <img 
-                    src={profile.logo_url} 
-                    alt="Logo" 
-                    // LOGO MAIOR AQUI: h-10 no mobile, h-14 no desktop
-                    className="h-10 md:h-14 w-auto max-w-[150px] object-contain rounded-md transition-transform group-hover:scale-105" 
+                   src={profile.logo_url} 
+                   alt="Logo" 
+                   className="h-10 md:h-14 w-auto max-w-[150px] object-contain rounded-md transition-transform group-hover:scale-105" 
                  />
               ) : (
                  <Dumbbell size={32} />
               )}
-              {/* Texto só aparece se não tiver logo, ou se quiser forçar */}
               <span className={profile.logo_url ? "hidden lg:inline" : ""}>COACH<span className="text-white">PRO</span></span>
             </Link>
 
@@ -60,8 +59,9 @@ export default async function Navbar() {
               <p className="text-[10px] text-lime-500 font-black uppercase tracking-widest">{profile.role === 'coach' ? 'Treinador' : 'Atleta'}</p>
             </div>
             
-            <form action="/auth/signout" method="post">
-                <button className="p-3 text-zinc-500 hover:text-red-500 hover:bg-zinc-900 rounded-xl transition-colors" title="Sair">
+            {/* 2. FORMULÁRIO CONECTADO NA AÇÃO (Adeus erro 404!) */}
+            <form action={signOutAction}>
+                <button type="submit" className="p-3 text-zinc-500 hover:text-red-500 hover:bg-zinc-900 rounded-xl transition-colors" title="Sair do Sistema">
                     <LogOut size={22} />
                 </button>
             </form>

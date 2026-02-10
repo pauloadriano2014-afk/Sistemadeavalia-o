@@ -6,8 +6,9 @@ import { Users, ClipboardList, Plus, ArrowRight, Activity, TrendingUp, Zap, Trop
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return redirect("/login");
+  if (!user) return redirect("/entrar"); // Redireciona para /entrar se não logado
 
+  // Busca o perfil do usuário logado
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
 
   if (!profile) return null;
@@ -18,11 +19,32 @@ export default async function DashboardPage() {
   let recentStudents: any[] = [];
 
   if (profile.role === 'coach') {
-    const { count: sCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('tenant_id', profile.tenant_id);
+    // CORREÇÃO DE SEGURANÇA: Filtra por role 'athlete' para não mostrar outros treinadores
+    const { count: sCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'athlete') // Garante que só busca ALUNOS
+        .eq('tenant_id', profile.tenant_id); // Garante que só busca do SEU time
+    
     totalStudents = sCount || 0;
-    const { count: cCount } = await supabase.from('checkins').select('*', { count: 'exact', head: true }).eq('tenant_id', profile.tenant_id).neq('status', 'reviewed');
+
+    const { count: cCount } = await supabase
+        .from('checkins')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', profile.tenant_id)
+        .neq('status', 'reviewed');
+    
     pendingCheckins = cCount || 0;
-    const { data } = await supabase.from('profiles').select('*').eq('role', 'student').eq('tenant_id', profile.tenant_id).order('created_at', { ascending: false }).limit(3);
+
+    // Busca os alunos recentes (apenas atletas)
+    const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'athlete') // Garante que só busca ALUNOS
+        .eq('tenant_id', profile.tenant_id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+    
     recentStudents = data || [];
   }
 
@@ -183,7 +205,7 @@ function CoachView({ profile, total, pending, recents }: any) {
                 {recents.map((s: any) => (
                     <div key={s.id} className="flex items-center gap-4 p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-lime-500/30 transition-all group cursor-pointer">
                         <div className="h-10 w-10 rounded-xl bg-zinc-900 flex items-center justify-center text-lime-500 font-black border border-white/5 group-hover:scale-110 transition-transform">
-                            {s.full_name[0]}
+                            {s.full_name ? s.full_name[0] : '?'}
                         </div>
                         <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-bold text-white truncate group-hover:text-lime-400 transition-colors">{s.full_name}</h4>

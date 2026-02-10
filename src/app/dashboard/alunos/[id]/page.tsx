@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase-server";
 import { 
   ArrowLeft, Weight, TrendingDown, Calendar, 
   Image as ImageIcon, Plus, Sparkles, Activity, 
-  ClipboardList 
+  ClipboardList, ScanEye // <--- NOVO ÍCONE
 } from "lucide-react";
 import Link from "next/link";
 import PhotoComparator from "@/components/PhotoComparator";
@@ -22,7 +22,6 @@ function StatusCard({ label, value, icon, color = "text-white" }: any) {
 }
 
 export default async function AlunoDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
-  // 1. CORREÇÃO DO ERRO: Await params
   const resolvedParams = await params;
   const studentId = resolvedParams.id;
   
@@ -73,6 +72,16 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
             </div>
 
             <div className="flex items-center gap-3">
+                 
+                 {/* NOVO BOTÃO: DIAGNÓSTICO INICIAL (RAIO-X) */}
+                 <Link 
+                   href={`/dashboard/alunos/${studentId}/diagnostico`}
+                   className="hidden md:flex items-center gap-2 bg-zinc-900 text-blue-400 border border-zinc-800 hover:border-blue-500 hover:text-white px-4 py-2 rounded-xl font-black uppercase tracking-wider text-xs transition-all shadow-[0_0_10px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]"
+                 >
+                   <ScanEye size={16} />
+                   Raio-X
+                 </Link>
+
                  {/* Botão IA */}
                  <Link 
                    href={`/dashboard/alunos/${studentId}/comparativo`}
@@ -215,7 +224,7 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
                                         checkinId={checkin.id} 
                                         studentId={studentId} 
                                         initialFeedback={checkin.feedback}
-                                    />
+                                     />
                                 </div>
                             </div>
                         </div>

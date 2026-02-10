@@ -15,19 +15,16 @@ export async function createStudent(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) return redirect("/login");
+  if (!user) return redirect("/entrar");
 
-  const { data: coachProfile } = await supabase
+  // Busca dados do Coach
+  let { data: coachProfile } = await supabase
     .from("profiles")
-    .select("tenant_id")
+    .select("*")
     .eq("id", user.id)
     .single();
 
-  if (!coachProfile?.tenant_id) {
-    throw new Error("Coach sem time definido.");
-  }
-
-  // B. Configurar Cliente ADMIN (A Chave Mestra)
+  // B. Configurar Cliente ADMIN (Necessário para criar Tenant e Usuários)
   const supabaseAdmin = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!, 
@@ -39,11 +36,48 @@ export async function createStudent(formData: FormData) {
     }
   );
 
+  // --- AUTO-CORREÇÃO: SE NÃO TIVER TIME, CRIA UM AGORA ---
+  if (!coachProfile?.tenant_id) {
+    console.log("Coach sem time. Criando estrutura do Tenant...");
+    const newTenantId = crypto.randomUUID(); // Gera ID único
+
+    // 1. PRIMEIRO: Cria o Time na tabela 'tenants' (Isso resolve o erro 23503)
+    // Estamos assumindo que sua tabela tenants tem colunas 'id' e 'name'
+    const { error: tenantError } = await supabaseAdmin
+      .from("tenants")
+      .insert({ 
+        id: newTenantId, 
+        name: `Time ${coachProfile.full_name || 'Coach'}`
+      });
+
+    if (tenantError) {
+        console.error("Erro ao criar tabela tenants:", tenantError);
+        // Se der erro aqui, provavelmente a tabela tenants pede mais campos. 
+        // Mas o básico geralmente é id e name.
+        return { error: "Erro crítico ao criar seu time no sistema." };
+    }
+
+    // 2. SEGUNDO: Vincula o Coach a esse novo time
+    await supabaseAdmin
+      .from("profiles")
+      .update({ tenant_id: newTenantId })
+      .eq("id", user.id);
+    
+    // Atualiza a variável local
+    if (coachProfile) {
+        coachProfile.tenant_id = newTenantId;
+    } else {
+        coachProfile = { tenant_id: newTenantId };
+    }
+  }
+
   const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
   const fullName = formData.get("fullName") as string;
   const goal = formData.get("goal") as string;
-  const gender = formData.get("gender") as string; // <--- NOVO: Pegando o gênero
+  const gender = formData.get("gender") as string;
+  
+  // --- SENHA GERADA (Oculta) ---
+  const password = crypto.randomUUID(); 
 
   // C. Criar Usuário no Auth (Admin)
   const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -55,29 +89,42 @@ export async function createStudent(formData: FormData) {
 
   if (createError) {
     console.error("Erro ao criar Auth:", createError);
-    return { error: createError.message };
+    return { error: `Erro ao criar conta: ${createError.message}` };
   }
 
   if (!newUser.user) return { error: "Erro desconhecido ao criar usuário." };
 
-  // D. Atualizar o Perfil
-  const { error: updateError } = await supabaseAdmin
-    .from("profiles")
-    .update({
-      role: "student",
+  // D. Atualizar o Perfil do Aluno
+  const profileData = {
+      role: "student", // Garante que o banco aceite (enum user_role)
       tenant_id: coachProfile.tenant_id,
       selected_goal: goal,
       full_name: fullName,
-      gender: gender // <--- NOVO: Salvando no banco
-    })
+      gender: gender
+  };
+
+  const { error: updateError } = await supabaseAdmin
+    .from("profiles")
+    .update(profileData)
     .eq("id", newUser.user.id);
 
   if (updateError) {
-    console.error("Erro ao atualizar perfil:", updateError);
+    console.error("Update falhou, tentando Insert manual...", updateError);
+    // Fallback: Tenta inserir se o update falhar (caso o trigger não tenha rodado)
+    const { error: insertError } = await supabaseAdmin.from("profiles").insert({
+        id: newUser.user.id,
+        email: email,
+        ...profileData
+    });
+    
+    if (insertError) {
+        console.error("Erro final ao inserir perfil:", insertError);
+        return { error: "Erro ao salvar dados do aluno no banco." };
+    }
   }
 
   revalidatePath("/dashboard/alunos");
-  redirect("/dashboard/alunos");
+  return { success: true };
 }
 
 // --- SALVAR FEEDBACK ---

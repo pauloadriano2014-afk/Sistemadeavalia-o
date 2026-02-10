@@ -20,4 +20,5 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Atualização forçada para limpar cache de build da Vercel
 export default nextConfig;

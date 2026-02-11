@@ -36,25 +36,33 @@ export default function DiagnosticoPage() {
     loadData();
   }, [studentId, supabase]);
 
+  // FUNÇÃO DE UPLOAD BLINDADA
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, pose: string) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
       try {
-        // AQUI ESTÁ O PULO DO GATO PARA IPHONE/HEIC
+        // Tenta comprimir e converter para JPG (Melhor cenário)
         const options = { 
-            maxSizeMB: 0.5, 
+            maxSizeMB: 0.8, 
             maxWidthOrHeight: 1280,
             useWebWorker: true,
-            fileType: "image/jpeg" // <--- ISSO FORÇA A CONVERSÃO PARA JPEG NO NAVEGADOR
+            fileType: "image/jpeg"
         };
-
         const compressed = await imageCompression(file, options);
         const base64 = await imageCompression.getDataUrlFromFile(compressed);
         setPhotos(prev => ({ ...prev, [pose]: base64 }));
+
       } catch (err) { 
-          console.error(err);
-          alert("Erro ao processar imagem. Tente outra."); 
+          console.warn("Erro na compressão (provavel HEIC), tentando envio bruto...", err);
+          
+          // PLANO B: Se falhar (HEIC no Windows), lê o arquivo direto
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              const base64 = reader.result as string;
+              setPhotos(prev => ({ ...prev, [pose]: base64 }));
+          };
+          reader.readAsDataURL(file);
       }
   };
 
@@ -62,26 +70,24 @@ export default function DiagnosticoPage() {
     setAnalyzing(true);
     setResult("");
 
-    // Filtra apenas fotos que foram carregadas
     const validImages = Object.entries(photos)
         .filter(([_, base64]) => base64 !== null)
         .map(([label, base64]) => ({ label, base64: base64! }));
 
     if (validImages.length === 0) {
-        alert("Adicione pelo menos uma foto para análise.");
+        alert("Adicione pelo menos uma foto.");
         setAnalyzing(false);
         return;
     }
 
     const context = {
-        name: student.full_name,
-        gender: student.gender,
-        goal: student.selected_goal,
+        name: student?.full_name || "Atleta",
+        gender: student?.gender || "Não informado",
+        goal: student?.selected_goal || "Estética",
         age: "Não informado", 
         history: history
     };
 
-    // Chama a Server Action que consertamos
     const response = await generateInitialAssessment(validImages, context);
     
     if (response.error) {
@@ -97,8 +103,6 @@ export default function DiagnosticoPage() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-20">
-      
-      {/* Header */}
       <div className="max-w-5xl mx-auto px-6 py-8 border-b border-zinc-900 flex justify-between items-center sticky top-0 bg-black/95 backdrop-blur z-50">
          <Link href={`/dashboard/alunos/${studentId}`} className="text-zinc-400 hover:text-white flex items-center gap-2 font-bold uppercase text-xs tracking-wider">
             <ArrowLeft size={16} /> Voltar
@@ -109,12 +113,9 @@ export default function DiagnosticoPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Lado Esquerdo: Inputs */}
         <div className="lg:col-span-4 space-y-6">
             <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
                 <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest">1. Upload das Fotos</h3>
-                
                 <div className="grid grid-cols-3 gap-2">
                     {POSES.map(pose => (
                         <label key={pose} className={`aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden transition-all ${photos[pose] ? 'border-lime-500' : 'border-zinc-800 hover:border-zinc-600'}`}>
@@ -135,7 +136,7 @@ export default function DiagnosticoPage() {
                 <textarea 
                     value={history}
                     onChange={(e) => setHistory(e.target.value)}
-                    placeholder="Ex: Pratica musculação há 2 anos, tem dor no joelho, dificuldade em ganhar massa..."
+                    placeholder="Contexto..."
                     rows={4}
                     className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white focus:border-lime-500 outline-none resize-none"
                 />
@@ -146,7 +147,6 @@ export default function DiagnosticoPage() {
             </button>
         </div>
 
-        {/* Lado Direito: Resultado */}
         <div className="lg:col-span-8">
             {result ? (
                 <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl animate-in fade-in slide-in-from-bottom-4">
@@ -161,7 +161,6 @@ export default function DiagnosticoPage() {
                 </div>
             )}
         </div>
-
       </div>
     </div>
   );

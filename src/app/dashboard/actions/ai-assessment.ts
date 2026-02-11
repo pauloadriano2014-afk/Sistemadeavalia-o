@@ -7,7 +7,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 export async function generateInitialAssessment(images: { label: string, base64: string }[], context: any) {
   try {
     // 1. Usando o modelo que VOCÊ JÁ PROVOU QUE FUNCIONA
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
     // 2. Função de limpeza de Base64 (Igualzinha à do ai-compare.ts)
     const processBase64 = (base64String: string) => {

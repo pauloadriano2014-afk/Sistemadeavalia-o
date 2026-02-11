@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useParams } from "next/navigation";
 import { generateInitialAssessment } from "@/app/dashboard/actions/ai-assessment"; 
-import { ArrowLeft, BrainCircuit, Loader2, Upload, ScanEye } from "lucide-react";
+import { transcribeAudio } from "@/app/dashboard/actions/transcribe"; // Importando a ação de áudio
+import { ArrowLeft, BrainCircuit, Loader2, Upload, ScanEye, Mic, Square } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
 import imageCompression from 'browser-image-compression';
@@ -28,6 +29,12 @@ export default function DiagnosticoPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState("");
 
+  // Estados para Gravação de Áudio
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
   useEffect(() => {
     async function loadData() {
       const { data } = await supabase.from('profiles').select('*').eq('id', studentId).single();
@@ -36,13 +43,61 @@ export default function DiagnosticoPage() {
     loadData();
   }, [studentId, supabase]);
 
-  // FUNÇÃO DE UPLOAD BLINDADA
+  // --- Lógica de Áudio ---
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        handleTranscription(audioBlob);
+        stream.getTracks().forEach(track => track.stop()); // Desliga o mic
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      alert("Erro ao acessar microfone. Verifique as permissões.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleTranscription = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    const formData = new FormData();
+    // O arquivo precisa ter nome e extensão para a OpenAI aceitar
+    formData.append("file", audioBlob, "audio.webm");
+
+    const response = await transcribeAudio(formData);
+
+    if (response.text) {
+      // Adiciona o texto gravado ao que já estava escrito (ou cria novo)
+      setHistory(prev => (prev ? `${prev} ${response.text}` : response.text));
+    } else {
+      alert("Não foi possível entender o áudio.");
+    }
+    setIsTranscribing(false);
+  };
+  // -----------------------
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, pose: string) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
       try {
-        // Tenta comprimir e converter para JPG (Melhor cenário)
         const options = { 
             maxSizeMB: 0.8, 
             maxWidthOrHeight: 1280,
@@ -52,11 +107,8 @@ export default function DiagnosticoPage() {
         const compressed = await imageCompression(file, options);
         const base64 = await imageCompression.getDataUrlFromFile(compressed);
         setPhotos(prev => ({ ...prev, [pose]: base64 }));
-
       } catch (err) { 
-          console.warn("Erro na compressão (provavel HEIC), tentando envio bruto...", err);
-          
-          // PLANO B: Se falhar (HEIC no Windows), lê o arquivo direto
+          console.warn("Erro na compressão, tentando envio bruto...", err);
           const reader = new FileReader();
           reader.onloadend = () => {
               const base64 = reader.result as string;
@@ -131,12 +183,35 @@ export default function DiagnosticoPage() {
                 </div>
             </div>
 
+            {/* SEÇÃO DE CONTEXTO COM ÁUDIO */}
             <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
-                <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest">2. Contexto (Opcional)</h3>
+                <div className="flex justify-between items-center">
+                    <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest">2. Contexto (Áudio ou Texto)</h3>
+                    
+                    {/* BOTÃO DE GRAVAR */}
+                    <button 
+                        onClick={isRecording ? stopRecording : startRecording}
+                        disabled={isTranscribing}
+                        className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                            isRecording 
+                            ? "bg-red-500/20 text-red-500 animate-pulse border border-red-500/50" 
+                            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+                        }`}
+                    >
+                        {isTranscribing ? (
+                            <><Loader2 size={12} className="animate-spin"/> Transcrevendo...</>
+                        ) : isRecording ? (
+                            <><Square size={12} fill="currentColor"/> Parar Gravação</>
+                        ) : (
+                            <><Mic size={12}/> Gravar Áudio</>
+                        )}
+                    </button>
+                </div>
+
                 <textarea 
                     value={history}
                     onChange={(e) => setHistory(e.target.value)}
-                    placeholder="Contexto..."
+                    placeholder="Clique em 'Gravar Áudio' e fale sobre o aluno, ou digite aqui..."
                     rows={4}
                     className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white focus:border-lime-500 outline-none resize-none"
                 />

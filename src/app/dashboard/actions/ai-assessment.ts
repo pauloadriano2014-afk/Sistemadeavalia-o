@@ -1,67 +1,74 @@
 "use server";
 
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+
 export async function generateInitialAssessment(images: { label: string, base64: string }[], context: any) {
   try {
-    const apiKey = process.env.GOOGLE_API_KEY;
-    
-    // 1. Limpeza do Base64 
+    // 1. MODELO: Usando EXATAMENTE o mesmo do seu comparativo que funciona
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    // 2. LIMPEZA: A mesma função simples e robusta do comparativo
     const processBase64 = (base64String: string) => {
-        if (typeof base64String === 'string' && base64String.includes(",")) {
-            return base64String.split(",")[1];
-        }
-        return base64String;
+        return base64String.split(",")[1] || base64String;
     };
 
+    // 3. PREPARAÇÃO: Forçando "image/jpeg" igual ao comparativo
+    // Isso resolve problemas de HEIC/PNG, pois o Gemini se vira com o binário
     const imageParts = images.map(img => ({
-      inline_data: {
-        mime_type: "image/jpeg",
-        data: processBase64(img.base64)
+      inlineData: {
+        data: processBase64(img.base64),
+        mimeType: "image/jpeg" 
       }
     }));
 
-    const promptText = `
-      ATUE COMO UM TREINADOR DE ELITE.
-      CONTEXTO: Nome: ${context.name}, Gênero: ${context.gender}, Objetivo: ${context.goal}, Idade: ${context.age}.
+    // 4. PROMPT (Adaptado para Diagnóstico, mas com a mesma estrutura de chamada)
+    const prompt = `
+      ATUE COMO UM TREINADOR DE ELITE DE FISICULTURISMO E BIOMECÂNICA.
       
-      Faça um DIAGNÓSTICO FÍSICO INICIAL completo.
-      
-      ESTRUTURA DA RESPOSTA (Markdown):
-      ## 1. ANÁLISE ESTRUTURAL (Ossos, Postura, BF%)
-      ## 2. PONTOS FORTES
-      ## 3. PONTOS DE MELHORIA
+      CONTEXTO DO ALUNO:
+      - Nome: ${context.name}
+      - Gênero: ${context.gender}
+      - Objetivo: ${context.goal}
+      - Idade: ${context.age}
+      - Histórico: ${context.history || "Não informado"}
+
+      Sua missão é fazer um DIAGNÓSTICO FÍSICO INICIAL completo baseado nessas fotos.
+      Seja técnico, direto e motivador.
+
+      ESTRUTURA DA RESPOSTA (Use Markdown):
+
+      ## 1. ANÁLISE ESTRUTURAL
+      - Avalie a estrutura óssea (clavículas, cintura pélvica).
+      - Postura (algum desvio óbvio?).
+      - Estimativa visual de BF% (Gordura Corporal).
+
+      ## 2. PONTOS FORTES (Genética Favorável)
+      - Quais grupos musculares se destacam?
+      - Pontos positivos da linha do shape.
+
+      ## 3. PONTOS DE MELHORIA (O Foco do Treino)
+      - Quais músculos estão "para trás" e precisam de prioridade?
+      - Assimetrias visíveis?
+
       ## 4. VEREDITO E ESTRATÉGIA
-      
-      Seja direto e fale com o aluno.
+      - Qual deve ser a fase inicial? (Cutting agressivo, Recomposição, Bulking Limpo?)
+      - Sugestão de divisão de treino.
+
+      NOTA: Fale diretamente com o aluno (${context.name}).
     `;
 
-    // AQUI ESTÁ O SEGREDO: Usando 'gemini-flash-latest' que apareceu na sua lista
-    // Ele aponta para o 1.5 Flash mas funciona onde o nome novo falha.
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText }, ...imageParts] }]
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (data.error) {
-      console.error("Erro API Google:", JSON.stringify(data.error, null, 2));
-      return { error: `Erro API (${data.error.code}): ${data.error.message}` };
-    }
-
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    // 5. CHAMADA: Igual ao comparativo
+    const result = await model.generateContent([prompt, ...imageParts]);
+    const response = await result.response;
     
-    if (!text) return { error: "A IA não retornou texto. Tente novamente." };
-
-    return { text };
+    return { text: response.text() };
 
   } catch (error: any) {
-    console.error("Erro Interno:", error);
-    return { error: `Erro interno: ${error.message}` };
+    console.error("Erro na IA (Assessment):", error);
+    // Retorna mensagem genérica igual ao comparativo para não assustar com detalhes técnicos, 
+    // mas loga o erro real no console do servidor.
+    return { error: "Erro ao processar análise. Verifique se as imagens não estão corrompidas." };
   }
 }

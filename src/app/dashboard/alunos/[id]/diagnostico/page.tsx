@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useParams } from "next/navigation";
-import { generateInitialAssessment } from "@/app/dashboard/actions/ai-assessment"; // Importe a ação nova
-import { ArrowLeft, BrainCircuit, Loader2, Upload, X, ScanEye, FileText } from "lucide-react";
+import { generateInitialAssessment } from "@/app/dashboard/actions/ai-assessment"; 
+import { ArrowLeft, BrainCircuit, Loader2, Upload, ScanEye } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
 import imageCompression from 'browser-image-compression';
@@ -39,11 +39,23 @@ export default function DiagnosticoPage() {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, pose: string) => {
       const file = e.target.files?.[0];
       if (!file) return;
+
       try {
-        const compressed = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280 });
+        // AQUI ESTÁ O PULO DO GATO PARA IPHONE/HEIC
+        const options = { 
+            maxSizeMB: 0.5, 
+            maxWidthOrHeight: 1280,
+            useWebWorker: true,
+            fileType: "image/jpeg" // <--- ISSO FORÇA A CONVERSÃO PARA JPEG NO NAVEGADOR
+        };
+
+        const compressed = await imageCompression(file, options);
         const base64 = await imageCompression.getDataUrlFromFile(compressed);
         setPhotos(prev => ({ ...prev, [pose]: base64 }));
-      } catch (err) { alert("Erro na imagem."); }
+      } catch (err) { 
+          console.error(err);
+          alert("Erro ao processar imagem. Tente outra."); 
+      }
   };
 
   const runAnalysis = async () => {
@@ -65,14 +77,18 @@ export default function DiagnosticoPage() {
         name: student.full_name,
         gender: student.gender,
         goal: student.selected_goal,
-        age: "Não informado", // Você pode puxar isso do banco se tiver
+        age: "Não informado", 
         history: history
     };
 
+    // Chama a Server Action que consertamos
     const response = await generateInitialAssessment(validImages, context);
     
-    if (response.error) alert(response.error);
-    else setResult(response.text || "");
+    if (response.error) {
+        alert(response.error);
+    } else {
+        setResult(response.text || "");
+    }
     
     setAnalyzing(false);
   };
@@ -103,7 +119,7 @@ export default function DiagnosticoPage() {
                     {POSES.map(pose => (
                         <label key={pose} className={`aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden transition-all ${photos[pose] ? 'border-lime-500' : 'border-zinc-800 hover:border-zinc-600'}`}>
                             {photos[pose] ? (
-                                <img src={photos[pose]!} className="w-full h-full object-cover" />
+                                <img src={photos[pose]!} className="w-full h-full object-cover" alt={pose} />
                             ) : (
                                 <Upload size={20} className="text-zinc-600" />
                             )}

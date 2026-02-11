@@ -8,7 +8,7 @@ export async function generateInitialAssessment(images: { label: string, base64:
   try {
     // TENTATIVA 1: Usando o nome exato da versão (Mais seguro que o apelido)
     // Se o 'latest' falhar, o '001' costuma passar
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const processBase64 = (base64String: string) => {
         if (typeof base64String === 'string' && base64String.includes(",")) {

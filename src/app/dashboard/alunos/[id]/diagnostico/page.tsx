@@ -160,7 +160,7 @@ export default function DiagnosticoPage() {
             <ArrowLeft size={16} /> Voltar
          </Link>
          <h1 className="text-xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
-            <ScanEye className="text-lime-500" /> Diagnóstico Inicial
+            <ScanEye className="text-brand" /> Diagnóstico Inicial
          </h1>
       </div>
 
@@ -170,7 +170,7 @@ export default function DiagnosticoPage() {
                 <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest">1. Upload das Fotos</h3>
                 <div className="grid grid-cols-3 gap-2">
                     {POSES.map(pose => (
-                        <label key={pose} className={`aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden transition-all ${photos[pose] ? 'border-lime-500' : 'border-zinc-800 hover:border-zinc-600'}`}>
+                        <label key={pose} className={`aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden transition-all ${photos[pose] ? 'border-brand' : 'border-zinc-800 hover:border-zinc-600'}`}>
                             {photos[pose] ? (
                                 <img src={photos[pose]!} className="w-full h-full object-cover" alt={pose} />
                             ) : (
@@ -213,11 +213,11 @@ export default function DiagnosticoPage() {
                     onChange={(e) => setHistory(e.target.value)}
                     placeholder="Clique em 'Gravar Áudio' e fale sobre o aluno, ou digite aqui..."
                     rows={4}
-                    className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white focus:border-lime-500 outline-none resize-none"
+                    className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white focus:border-brand outline-none resize-none"
                 />
             </div>
 
-            <button onClick={runAnalysis} disabled={analyzing} className="w-full bg-lime-500 hover:bg-lime-400 text-black font-black py-4 rounded-xl uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(132,204,22,0.3)] disabled:opacity-50">
+            <button onClick={runAnalysis} disabled={analyzing} className="w-full bg-brand hover:bg-lime-400 text-black font-black py-4 rounded-xl uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(132,204,22,0.3)] disabled:opacity-50">
                 {analyzing ? <Loader2 className="animate-spin"/> : <><BrainCircuit size={20}/> GERAR DIAGNÓSTICO</>}
             </button>
         </div>

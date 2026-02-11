@@ -22,7 +22,7 @@ export default async function Navbar() {
           
           {/* LOGO */}
           <div className="flex items-center gap-8">
-            <Link href="/dashboard" className="flex items-center gap-3 text-lime-500 font-black text-2xl tracking-tighter hover:opacity-80 transition-opacity italic group">
+            <Link href="/dashboard" className="flex items-center gap-3 text-brand font-black text-2xl tracking-tighter hover:opacity-80 transition-opacity italic group">
               {profile.logo_url ? (
                  /* eslint-disable-next-line @next/next/no-img-element */
                  <img 
@@ -39,13 +39,13 @@ export default async function Navbar() {
             {/* MENUS DO COACH */}
             {profile.role === 'coach' && (
               <div className="hidden md:flex items-center gap-8 ml-4">
-                <Link href="/dashboard/alunos" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest hover:border-b-2 hover:border-lime-500 py-1">
+                <Link href="/dashboard/alunos" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest hover:border-b-2 hover:border-brand py-1">
                   Atletas
                 </Link>
-                <Link href="/dashboard/avaliacoes" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest hover:border-b-2 hover:border-lime-500 py-1">
+                <Link href="/dashboard/avaliacoes" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest hover:border-b-2 hover:border-brand py-1">
                   Avaliações
                 </Link>
-                <Link href="/dashboard/config" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors flex items-center gap-1 uppercase tracking-widest hover:border-b-2 hover:border-lime-500 py-1">
+                <Link href="/dashboard/config" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors flex items-center gap-1 uppercase tracking-widest hover:border-b-2 hover:border-brand py-1">
                   <Settings size={14} /> Config
                 </Link>
               </div>
@@ -56,7 +56,7 @@ export default async function Navbar() {
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-sm text-white font-bold">{profile.full_name}</p>
-              <p className="text-[10px] text-lime-500 font-black uppercase tracking-widest">{profile.role === 'coach' ? 'Treinador' : 'Atleta'}</p>
+              <p className="text-[10px] text-brand font-black uppercase tracking-widest">{profile.role === 'coach' ? 'Treinador' : 'Atleta'}</p>
             </div>
             
             {/* 2. FORMULÁRIO CONECTADO NA AÇÃO (Adeus erro 404!) */}

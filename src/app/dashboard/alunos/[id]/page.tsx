@@ -12,7 +12,7 @@ import FeedbackForm from "@/components/FeedbackForm";
 function StatusCard({ label, value, icon, color = "text-white" }: any) {
     return (
         <div className="bg-zinc-950 border border-zinc-900 p-5 rounded-2xl flex flex-col justify-between h-28 relative overflow-hidden group hover:border-zinc-800 transition-colors">
-            <div className="absolute top-0 right-0 p-4 opacity-10 scale-125 origin-top-right group-hover:text-lime-500 transition-colors">
+            <div className="absolute top-0 right-0 p-4 opacity-10 scale-125 origin-top-right group-hover:text-brand transition-colors">
                 {icon}
             </div>
             <span className="text-zinc-500 text-[10px] uppercase font-black tracking-widest">{label}</span>
@@ -85,7 +85,7 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
                  {/* Botão IA */}
                  <Link 
                    href={`/dashboard/alunos/${studentId}/comparativo`}
-                   className="hidden md:flex items-center gap-2 bg-zinc-900 text-lime-400 border border-zinc-800 hover:border-lime-500 hover:text-white px-4 py-2 rounded-xl font-black uppercase tracking-wider text-xs transition-all"
+                   className="hidden md:flex items-center gap-2 bg-zinc-900 text-lime-400 border border-zinc-800 hover:border-brand hover:text-white px-4 py-2 rounded-xl font-black uppercase tracking-wider text-xs transition-all"
                  >
                    <Sparkles size={16} />
                    IA 4.0
@@ -94,7 +94,7 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
                  {/* Novo Check-in */}
                  <Link 
                    href={`/dashboard/alunos/${studentId}/novo-checkin`}
-                   className="flex items-center gap-2 bg-lime-500 hover:bg-lime-400 text-black px-5 py-2 rounded-xl font-black uppercase tracking-wider text-xs transition-colors shadow-[0_0_15px_rgba(132,204,22,0.3)] hover:shadow-[0_0_25px_rgba(132,204,22,0.5)]"
+                   className="flex items-center gap-2 bg-brand hover:bg-lime-400 text-black px-5 py-2 rounded-xl font-black uppercase tracking-wider text-xs transition-colors shadow-[0_0_15px_rgba(132,204,22,0.3)] hover:shadow-[0_0_25px_rgba(132,204,22,0.5)]"
                  >
                    <Plus size={18} />
                    <span className="hidden sm:inline">Novo Check-in</span>
@@ -110,13 +110,13 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
             <StatusCard 
                 label="Peso Atual" 
                 value={`${currentWeight} kg`} 
-                icon={<Weight size={24} className="text-lime-500"/>}
+                icon={<Weight size={24} className="text-brand"/>}
             />
             <StatusCard 
                 label="Evolução" 
                 value={`${weightDiff > 0 ? '+' : ''}${weightDiff.toFixed(1)} kg`} 
                 color={weightDiff <= 0 ? "text-lime-400" : "text-red-500"}
-                icon={<TrendingDown size={24} className={weightDiff <= 0 ? "text-lime-500" : "text-red-500"}/>}
+                icon={<TrendingDown size={24} className={weightDiff <= 0 ? "text-brand" : "text-red-500"}/>}
             />
             <StatusCard 
                 label="Check-ins" 
@@ -132,9 +132,9 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
 
         {/* COMPARADOR (Contido) */}
         <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-lime-500/5 blur-[100px] rounded-full pointer-events-none"></div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 blur-[100px] rounded-full pointer-events-none"></div>
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-900 relative z-10">
-                <div className="p-2 bg-lime-500/10 rounded-lg text-lime-500">
+                <div className="p-2 bg-brand/10 rounded-lg text-brand">
                     <ImageIcon size={20} />
                 </div>
                 <div>
@@ -161,7 +161,7 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
                 )}
 
                 {checkins.map((checkin) => (
-                    <div key={checkin.id} className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 hover:border-lime-500/30 transition-colors duration-300 group">
+                    <div key={checkin.id} className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 hover:border-brand/30 transition-colors duration-300 group">
                         <div className="flex flex-col md:flex-row gap-8">
                             
                             {/* Data e Peso */}
@@ -170,7 +170,7 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
                                     <span className="text-4xl font-black text-white tracking-tighter block leading-none">
                                         {new Date(checkin.created_at).getDate()}
                                     </span>
-                                    <span className="text-xs text-lime-500 uppercase font-black tracking-widest">
+                                    <span className="text-xs text-brand uppercase font-black tracking-widest">
                                         {new Date(checkin.created_at).toLocaleString('pt-BR', { month: 'short' })}
                                     </span>
                                     <span className="text-[10px] text-zinc-600 block mt-1 font-bold">
@@ -204,7 +204,7 @@ export default async function AlunoDetalhesPage({ params }: { params: Promise<{ 
                                                     key={p.id} 
                                                     href={p.url} 
                                                     target="_blank" 
-                                                    className="relative w-20 h-28 bg-black rounded-lg border border-zinc-800 shrink-0 hover:border-lime-500 transition-all overflow-hidden group/img"
+                                                    className="relative w-20 h-28 bg-black rounded-lg border border-zinc-800 shrink-0 hover:border-brand transition-all overflow-hidden group/img"
                                                 >
                                                     {/* CORREÇÃO DO ALINHAMENTO */}
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}

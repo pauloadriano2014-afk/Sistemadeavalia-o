@@ -41,16 +41,16 @@ export default function ConfigPage() {
 
       <div className="bg-zinc-950 border border-zinc-900 p-8 rounded-2xl shadow-lg">
          <h2 className="text-sm font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wider">
-            <ImageIcon className="text-lime-500" size={20}/> 
+            <ImageIcon className="text-brand" size={20}/> 
             Identidade Visual
          </h2>
          
-         <label className="cursor-pointer bg-black border-2 border-dashed border-zinc-800 hover:border-lime-500 hover:bg-zinc-900/50 rounded-xl p-12 flex flex-col items-center justify-center transition-all group">
+         <label className="cursor-pointer bg-black border-2 border-dashed border-zinc-800 hover:border-brand hover:bg-zinc-900/50 rounded-xl p-12 flex flex-col items-center justify-center transition-all group">
             {loading ? (
-                <Loader2 className="animate-spin text-lime-500" size={32}/>
+                <Loader2 className="animate-spin text-brand" size={32}/>
             ) : (
                 <div className="bg-zinc-900 p-4 rounded-full mb-3 group-hover:scale-110 transition-transform">
-                    <Upload className="text-zinc-500 group-hover:text-lime-500 transition-colors" size={24}/>
+                    <Upload className="text-zinc-500 group-hover:text-brand transition-colors" size={24}/>
                 </div>
             )}
             <span className="text-sm font-bold text-zinc-400 group-hover:text-white uppercase tracking-wide">

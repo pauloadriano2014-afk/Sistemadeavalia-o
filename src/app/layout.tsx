@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       {/* MUDANÇA: bg-black text-white (Fim do Slate/Azul) */}
-      <body className={`${inter.className} bg-black text-white antialiased selection:bg-lime-500 selection:text-black`}>
+      <body className={`${inter.className} bg-black text-white antialiased selection:bg-brand selection:text-black`}>
         
         <NavbarWrapper>
             <Navbar />

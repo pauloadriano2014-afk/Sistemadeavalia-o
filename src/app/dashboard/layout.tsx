@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   const { data: profile } = await supabase.from('profiles').select('logo_url').eq('id', user.id).single();
 
   return (
-    <section className="bg-black min-h-screen relative overflow-x-hidden selection:bg-lime-500 selection:text-black">
+    <section className="bg-black min-h-screen relative overflow-x-hidden selection:bg-brand selection:text-black">
        
        {/* --- MARCA D'ÁGUA (BACKGROUND LOGO) --- */}
        {/* Fica fixa no centro, com pouca opacidade, não interfere no clique */}
@@ -29,7 +29,7 @@ export default async function DashboardLayout({
              />
           ) : (
              // Se não tiver logo, mostra um círculo sutil
-             <div className="w-[600px] h-[600px] bg-lime-500/5 blur-[150px] rounded-full"></div>
+             <div className="w-[600px] h-[600px] bg-brand/5 blur-[150px] rounded-full"></div>
           )}
        </div>
 

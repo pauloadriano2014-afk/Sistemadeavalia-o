@@ -20,11 +20,11 @@ export function DashboardSidebar() {
       <div className="p-8 flex items-center justify-center border-b border-zinc-900">
         <Link href="/dashboard" className="group">
             <div className="flex items-center gap-2">
-                <div className="p-2 bg-zinc-900 rounded-xl text-lime-500 group-hover:text-white transition-colors border border-zinc-800">
+                <div className="p-2 bg-zinc-900 rounded-xl text-brand group-hover:text-white transition-colors border border-zinc-800">
                     <Dumbbell size={24} />
                 </div>
                 <span className="text-xl font-black text-white italic tracking-tighter">
-                    COACH<span className="text-lime-500">PRO</span>
+                    COACH<span className="text-brand">PRO</span>
                 </span>
             </div>
         </Link>
@@ -40,7 +40,7 @@ export function DashboardSidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold uppercase text-xs tracking-widest ${
                 isActive 
-                  ? "bg-lime-500 text-black shadow-[0_0_15px_rgba(132,204,22,0.4)]" 
+                  ? "bg-brand text-black shadow-[0_0_15px_rgba(132,204,22,0.4)]" 
                   : "text-zinc-500 hover:text-white hover:bg-zinc-900"
               }`}
             >

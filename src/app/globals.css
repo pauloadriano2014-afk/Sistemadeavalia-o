@@ -3,9 +3,20 @@
 @tailwind utilities;
 
 :root {
+  /* SUAS CORES ORIGINAIS DE FUNDO */
   --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 2, 6, 23; /* Slate 950 - Fundo escuro */
+  --background-start-rgb: 2, 6, 23; /* Slate 950 */
   --background-end-rgb: 2, 6, 23;
+
+  /* --- SISTEMA DE TEMAS --- */
+  
+  /* TEMA PADRÃO (VERDE / brand) */
+  --brand-rgb: 132 204 22; 
+}
+
+/* TEMA ROXO (VIOLET-500) - Ativado pelo botão */
+[data-theme='purple'] {
+  --brand-rgb: 139 92 246; 
 }
 
 body {

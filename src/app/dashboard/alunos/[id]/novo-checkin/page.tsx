@@ -106,7 +106,7 @@ export default function CoachCheckinPage() {
         {/* HEADER DO CHECKIN */}
         <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg shadow-black/50">
           <div className="flex items-center gap-4">
-              <div className="p-3 bg-lime-500 rounded-xl text-black shadow-[0_0_15px_rgba(132,204,22,0.3)]"><User size={28}/></div>
+              <div className="p-3 bg-brand rounded-xl text-black shadow-[0_0_15px_rgba(132,204,22,0.3)]"><User size={28}/></div>
               <div>
               <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter">
                   Novo Registro Manual
@@ -121,8 +121,8 @@ export default function CoachCheckinPage() {
           </div>
 
           {/* Menu Estrito */}
-          <div className="flex items-center gap-2 bg-black border border-zinc-800 p-2 rounded-xl focus-within:border-lime-500 transition-colors">
-              <LayoutDashboard size={20} className="text-lime-500 ml-2" />
+          <div className="flex items-center gap-2 bg-black border border-zinc-800 p-2 rounded-xl focus-within:border-brand transition-colors">
+              <LayoutDashboard size={20} className="text-brand ml-2" />
               <select 
                   value={poseCategory}
                   onChange={(e) => setPoseCategory(e.target.value)}
@@ -145,11 +145,11 @@ export default function CoachCheckinPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <div>
                   <label className="block text-[10px] font-black text-lime-400 uppercase mb-3 tracking-widest ml-1">Peso Atual (kg)</label>
-                  <input name="weight" type="number" step="0.1" required className="w-full bg-black border border-zinc-800 rounded-xl px-5 py-4 text-white font-bold text-lg focus:ring-1 focus:ring-lime-500 focus:border-lime-500 focus:outline-none transition-all placeholder:text-zinc-700" placeholder="00.0" />
+                  <input name="weight" type="number" step="0.1" required className="w-full bg-black border border-zinc-800 rounded-xl px-5 py-4 text-white font-bold text-lg focus:ring-1 focus:ring-brand focus:border-brand focus:outline-none transition-all placeholder:text-zinc-700" placeholder="00.0" />
                </div>
                <div>
                   <label className="block text-[10px] font-black text-zinc-500 uppercase mb-3 tracking-widest ml-1">Relato do Aluno</label>
-                  <input name="notes" className="w-full bg-black border border-zinc-800 rounded-xl px-5 py-4 text-white font-bold focus:ring-1 focus:ring-lime-500 focus:border-lime-500 focus:outline-none transition-all placeholder:text-zinc-700" placeholder="Feedback rápido da semana..." />
+                  <input name="notes" className="w-full bg-black border border-zinc-800 rounded-xl px-5 py-4 text-white font-bold focus:ring-1 focus:ring-brand focus:border-brand focus:outline-none transition-all placeholder:text-zinc-700" placeholder="Feedback rápido da semana..." />
                </div>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function CoachCheckinPage() {
           <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-8 space-y-6 shadow-lg shadow-black/50">
             <div className="flex justify-between items-center">
                <h3 className="font-black text-white flex items-center gap-3 text-lg uppercase tracking-tight italic">
-                  <Camera size={24} className="text-lime-500"/> Protocolo de Fotos
+                  <Camera size={24} className="text-brand"/> Protocolo de Fotos
                </h3>
                {poseCategory !== 'padrao' && poseCategory !== 'hipertrofia' && (
                    <span className="text-[10px] bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 px-3 py-1.5 rounded-lg font-black flex items-center gap-2 uppercase tracking-wider">
@@ -249,7 +249,7 @@ export default function CoachCheckinPage() {
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full bg-lime-500 hover:bg-lime-400 disabled:bg-zinc-800 disabled:text-zinc-600 text-black font-black uppercase tracking-widest py-5 rounded-2xl transition-all shadow-[0_0_20px_rgba(132,204,22,0.3)] hover:shadow-[0_0_30px_rgba(132,204,22,0.5)] flex items-center justify-center gap-3 transform active:scale-95">
+          <button type="submit" disabled={loading} className="w-full bg-brand hover:bg-lime-400 disabled:bg-zinc-800 disabled:text-zinc-600 text-black font-black uppercase tracking-widest py-5 rounded-2xl transition-all shadow-[0_0_20px_rgba(132,204,22,0.3)] hover:shadow-[0_0_30px_rgba(132,204,22,0.5)] flex items-center justify-center gap-3 transform active:scale-95">
             {loading ? <Loader2 size={24} className="animate-spin" /> : <Save size={24} />}
             {loading ? status : "SALVAR NO PRONTUÁRIO"}
           </button>
@@ -268,15 +268,15 @@ function PhotoInput({ label, name }: { label: string, name: string }) {
   return (
     <div className="relative group col-span-1">
       <label className="block text-[10px] font-black text-zinc-500 mb-2 text-center uppercase h-6 flex items-end justify-center leading-tight tracking-wider">{label}</label>
-      <div className={`relative w-full aspect-[3/4] bg-black border-2 border-dashed rounded-xl flex flex-col items-center justify-center overflow-hidden transition-all duration-300 ${preview ? 'border-lime-500' : 'border-zinc-800 hover:border-lime-500 group-hover:bg-zinc-950'}`}>
+      <div className={`relative w-full aspect-[3/4] bg-black border-2 border-dashed rounded-xl flex flex-col items-center justify-center overflow-hidden transition-all duration-300 ${preview ? 'border-brand' : 'border-zinc-800 hover:border-brand group-hover:bg-zinc-950'}`}>
         {preview ? (
           <>
             <img src={preview} className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute top-2 right-2 bg-lime-500 text-black rounded-full p-1.5 shadow-lg"><div className="w-2 h-2 bg-black rounded-full"></div></div>
+            <div className="absolute top-2 right-2 bg-brand text-black rounded-full p-1.5 shadow-lg"><div className="w-2 h-2 bg-black rounded-full"></div></div>
           </>
         ) : (
           <>
-            <Camera className="text-zinc-600 mb-3 group-hover:text-lime-500 transition-colors w-8 h-8 group-hover:scale-110 duration-300" />
+            <Camera className="text-zinc-600 mb-3 group-hover:text-brand transition-colors w-8 h-8 group-hover:scale-110 duration-300" />
             <span className="text-[9px] text-zinc-600 group-hover:text-lime-400 font-black uppercase tracking-widest">Adicionar</span>
           </>
         )}

@@ -38,14 +38,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
       {/* Efeitos de Fundo (Neon) */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-lime-500/20 rounded-full blur-[128px] pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-lime-500/10 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/20 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand/10 rounded-full blur-[128px] pointer-events-none" />
 
       <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500 relative z-10">
         
         {/* Cabeçalho Dinâmico */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-zinc-900 border border-zinc-800 text-lime-500 mb-4 shadow-[0_0_40px_-10px_rgba(132,204,22,0.3)]">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-zinc-900 border border-zinc-800 text-brand mb-4 shadow-[0_0_40px_-10px_rgba(132,204,22,0.3)]">
             <Dumbbell size={40} />
           </div>
           <h1 className="text-4xl font-black text-white tracking-tighter italic uppercase">
@@ -66,7 +66,7 @@ export default function LoginPage() {
           )}
           
           {success && (
-            <div className="p-4 bg-lime-500/10 border border-lime-500/20 rounded-xl text-xs text-lime-400 font-bold text-center uppercase tracking-wide">
+            <div className="p-4 bg-brand/10 border border-brand/20 rounded-xl text-xs text-lime-400 font-bold text-center uppercase tracking-wide">
               🎉 {success}
             </div>
           )}
@@ -78,12 +78,12 @@ export default function LoginPage() {
                 <div className="animate-in slide-in-from-left duration-300">
                     <label className="text-[10px] font-black text-zinc-500 uppercase ml-1 mb-1 block tracking-widest">Nome Completo</label>
                     <div className="relative group">
-                        <User className="absolute left-4 top-3.5 text-zinc-600 group-focus-within:text-lime-500 transition-colors" size={20} />
+                        <User className="absolute left-4 top-3.5 text-zinc-600 group-focus-within:text-brand transition-colors" size={20} />
                         <input 
                         name="fullName" 
                         type="text" 
                         required={!isLogin}
-                        className="w-full bg-black border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-white font-bold placeholder:text-zinc-800 focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500/50 transition-all"
+                        className="w-full bg-black border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-white font-bold placeholder:text-zinc-800 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/50 transition-all"
                         placeholder="Ex: João Silva"
                         />
                     </div>
@@ -93,12 +93,12 @@ export default function LoginPage() {
             <div>
               <label className="text-[10px] font-black text-zinc-500 uppercase ml-1 mb-1 block tracking-widest">Email de Acesso</label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-3.5 text-zinc-600 group-focus-within:text-lime-500 transition-colors" size={20} />
+                <Mail className="absolute left-4 top-3.5 text-zinc-600 group-focus-within:text-brand transition-colors" size={20} />
                 <input 
                   name="email" 
                   type="email" 
                   required 
-                  className="w-full bg-black border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-white font-bold placeholder:text-zinc-800 focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500/50 transition-all"
+                  className="w-full bg-black border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-white font-bold placeholder:text-zinc-800 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/50 transition-all"
                   placeholder="seu@email.com"
                 />
               </div>
@@ -107,13 +107,13 @@ export default function LoginPage() {
             <div>
               <label className="text-[10px] font-black text-zinc-500 uppercase ml-1 mb-1 block tracking-widest">Senha de Acesso</label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-3.5 text-zinc-600 group-focus-within:text-lime-500 transition-colors" size={20} />
+                <Lock className="absolute left-4 top-3.5 text-zinc-600 group-focus-within:text-brand transition-colors" size={20} />
                 <input 
                   name="password" 
                   type="password" 
                   required 
                   minLength={6}
-                  className="w-full bg-black border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-white font-bold placeholder:text-zinc-800 focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500/50 transition-all"
+                  className="w-full bg-black border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-white font-bold placeholder:text-zinc-800 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/50 transition-all"
                   placeholder="••••••••"
                 />
               </div>
@@ -125,7 +125,7 @@ export default function LoginPage() {
             <button 
               formAction={(formData) => handleAction(formData, isLogin ? login : signup)}
               disabled={loading}
-              className="w-full bg-lime-500 hover:bg-lime-400 text-black font-black uppercase tracking-wider py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(132,204,22,0.2)] hover:shadow-[0_0_30px_rgba(132,204,22,0.4)] flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="w-full bg-brand hover:bg-lime-400 text-black font-black uppercase tracking-wider py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(132,204,22,0.2)] hover:shadow-[0_0_30px_rgba(132,204,22,0.4)] flex items-center justify-center gap-2 active:scale-[0.98]"
             >
               {loading ? (
                   <Loader2 size={20} className="animate-spin" /> 

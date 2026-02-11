@@ -6,10 +6,10 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 
 export async function generateInitialAssessment(images: { label: string, base64: string }[], context: any) {
   try {
-    // CORREÇÃO FINAL: Usando o FLASH (Mais rápido, sem bloqueio de região e nome padrão)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // TENTATIVA 1: Usando o nome exato da versão (Mais seguro que o apelido)
+    // Se o 'latest' falhar, o '001' costuma passar
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
 
-    // Função de limpeza de Base64 (Vital para não quebrar a imagem)
     const processBase64 = (base64String: string) => {
         if (typeof base64String === 'string' && base64String.includes(",")) {
             return base64String.split(",")[1];
@@ -34,29 +34,15 @@ export async function generateInitialAssessment(images: { label: string, base64:
       - Idade: ${context.age}
       - Histórico: ${context.history || "Não informado"}
 
-      Sua missão é fazer um DIAGNÓSTICO FÍSICO INICIAL completo baseado nessas fotos.
-      Seja técnico, direto e motivador. Use termos da área (simetria, linha de cintura, inserção muscular, maturidade).
-
+      Sua missão é fazer um DIAGNÓSTICO FÍSICO INICIAL completo.
+      
       ESTRUTURA DA RESPOSTA (Use Markdown):
-
       ## 1. ANÁLISE ESTRUTURAL
-      - Avalie a estrutura óssea (clavículas, cintura pélvica).
-      - Postura (algum desvio óbvio?).
-      - Estimativa visual de BF% (Gordura Corporal).
-
-      ## 2. PONTOS FORTES (Genética Favorável)
-      - Quais grupos musculares se destacam?
-      - Pontos positivos da linha do shape.
-
-      ## 3. PONTOS DE MELHORIA (O Foco do Treino)
-      - Quais músculos estão "para trás" e precisam de prioridade?
-      - Assimetrias visíveis?
-
+      ## 2. PONTOS FORTES
+      ## 3. PONTOS DE MELHORIA
       ## 4. VEREDITO E ESTRATÉGIA
-      - Qual deve ser a fase inicial? (Cutting agressivo, Recomposição, Bulking Limpo?)
-      - Sugestão de divisão de treino (ex: Focar em deltoides laterais e dorsais para alargar o shape).
-
-      NOTA: Fale diretamente com o aluno (${context.name}). Seja profissional mas acolhedor.
+      
+      NOTA: Fale diretamente com o aluno (${context.name}).
     `;
 
     const result = await model.generateContent([prompt, ...imageParts]);
@@ -65,7 +51,18 @@ export async function generateInitialAssessment(images: { label: string, base64:
 
   } catch (error: any) {
     console.error("Erro na IA (Assessment):", error);
-    // Retorna o erro exato para aparecer no seu alerta e sabermos o que foi
+
+    // DEBUG: Se der erro, vamos listar no Log quais modelos o servidor consegue ver
+    // Isso vai aparecer no seu painel do Render se falhar de novo
+    try {
+        console.log("Tentando listar modelos disponíveis...");
+        // @ts-ignore
+        const models = await genAI.listModels(); 
+        console.log("Modelos disponíveis:", JSON.stringify(models));
+    } catch (e) {
+        console.log("Erro ao listar modelos:", e);
+    }
+
     return { error: `Erro na IA: ${error.message}` };
   }
 }

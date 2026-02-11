@@ -6,13 +6,21 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 
 export async function generateInitialAssessment(images: { label: string, base64: string }[], context: any) {
   try {
-    // CORREÇÃO: Usando o modelo FLASH (Rápido, aceita imagens e funciona no Render)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // 1. Usando o modelo que VOCÊ JÁ PROVOU QUE FUNCIONA
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    // Prepara as imagens para o Gemini
+    // 2. Função de limpeza de Base64 (Igualzinha à do ai-compare.ts)
+    const processBase64 = (base64String: string) => {
+        if (base64String.includes(",")) {
+            return base64String.split(",")[1];
+        }
+        return base64String;
+    };
+
+    // 3. Monta as partes da imagem com segurança
     const imageParts = images.map(img => ({
       inlineData: {
-        data: img.base64.split(",")[1], // Remove o header do base64
+        data: processBase64(img.base64),
         mimeType: "image/jpeg"
       }
     }));
@@ -57,7 +65,7 @@ export async function generateInitialAssessment(images: { label: string, base64:
     return { text: response.text() };
 
   } catch (error: any) {
-    console.error("Erro na IA:", error); // Isso vai mostrar o erro real no terminal do Render se der falha
-    return { error: `Erro na IA: ${error.message}` }; // Mostra o erro na tela pra gente saber o que foi
+    console.error("Erro na IA (Assessment):", error);
+    return { error: `Erro na IA: ${error.message}` };
   }
 }

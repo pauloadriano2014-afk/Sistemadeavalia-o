@@ -6,18 +6,17 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 
 export async function generateInitialAssessment(images: { label: string, base64: string }[], context: any) {
   try {
-    // 1. Usando o modelo que VOCÊ JÁ PROVOU QUE FUNCIONA
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    // CORREÇÃO FINAL: Usando o FLASH (Mais rápido, sem bloqueio de região e nome padrão)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // 2. Função de limpeza de Base64 (Igualzinha à do ai-compare.ts)
+    // Função de limpeza de Base64 (Vital para não quebrar a imagem)
     const processBase64 = (base64String: string) => {
-        if (base64String.includes(",")) {
+        if (typeof base64String === 'string' && base64String.includes(",")) {
             return base64String.split(",")[1];
         }
         return base64String;
     };
 
-    // 3. Monta as partes da imagem com segurança
     const imageParts = images.map(img => ({
       inlineData: {
         data: processBase64(img.base64),
@@ -66,6 +65,7 @@ export async function generateInitialAssessment(images: { label: string, base64:
 
   } catch (error: any) {
     console.error("Erro na IA (Assessment):", error);
+    // Retorna o erro exato para aparecer no seu alerta e sabermos o que foi
     return { error: `Erro na IA: ${error.message}` };
   }
 }

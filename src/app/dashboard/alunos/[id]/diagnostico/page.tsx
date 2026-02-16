@@ -9,7 +9,7 @@ import { saveAssessment } from "@/app/dashboard/actions/save-assessment";
 import { ArrowLeft, BrainCircuit, Loader2, Upload, ScanEye, Mic, Square, Trash2, CheckCircle2, Edit3 } from "lucide-react";
 import Link from "next/link";
 import imageCompression from 'browser-image-compression';
-import { PhotoAnnotator } from "@/components/PhotoAnnotator";
+
 
 const POSES = ['Frente', 'Perfil', 'Costas'];
 

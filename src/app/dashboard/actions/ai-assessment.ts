@@ -20,42 +20,29 @@ export async function generateInitialAssessment(images: { label: string, base64:
       };
     });
 
-    // AQUI ESTÁ A MUDANÇA: O Prompt agora ensina a IA a ser didática
+    // PROMPT "MODO DETALHISTA & ESTRUTURADO"
     const promptText = `
-      ATUE COMO PAULO ADRIANO: Personal Trainer, Campeão de Fisiculturismo Natural e Educador.
-      
-      ## DADOS DO ALUNO(A)
-      - Nome: ${context.name} (${context.gender})
-      - Objetivo: ${context.goal}
-      - Histórico/Contexto (Narrado pelo Paulo): "${context.history || "Não informado"}"
+      ATUE COMO: Paulo Adriano, Treinador de Alta Performance.
+      CONTEXTO: Avaliação física técnica para prescrição.
+      ALUNO: ${context.name} (${context.gender}), Objetivo: ${context.goal}.
+      RELATO: "${context.history || "Sem relato"}"
 
-      ## SUA MISSÃO
-      Criar um relatório de "Raio-X Inicial" que será enviado para o aluno ler.
-      
-      ## O TOM DE VOZ (O "EQUILÍBRIO DE OURO"):
-      1. **Autoridade:** Use o termo técnico correto (ex: "Valgo Dinâmico", "Cifose", "Retração Escapular").
-      2. **Didática:** IMEDIATAMENTE explique o que isso significa de forma simples.
-      3. **Sem "Falar difícil à toa":** O aluno precisa entender ONDE ele vai melhorar.
-      
-      ## FORMATO DE RESPOSTA (Ideal para copiar e colar no Canva):
-      Use Markdown. Seja visualmente limpo.
+      SUA MISSÃO:
+      Você é o treinador pessoal. Fale diretamente com o aluno ("Eu vi...", "Notei...").
+      Seja DETALHISTA. Não faça resumos curtos. Use o espaço para educar o aluno sobre o corpo dele.
 
-      # 🏛️ ANÁLISE ESTRUTURAL
-      *(Avalie postura e estrutura óssea. Explique o impacto visual disso)*
-      * **Exemplo:** "Leve escoliose (desvio na coluna), o que faz seu ombro direito parecer mais baixo."
+      PARA CADA ÂNGULO, ANALISE:
+      1. Pontos Fortes (O que preservar).
+      2. Pontos de Atenção (Gordura, flacidez, assimetria).
+      3. Sugestão rápida de correção.
 
-      # 🔥 PONTOS FORTES (A GENÉTICA)
-      *(Destaque 3 pontos positivos. Use a estrutura: Termo Técnico - Explicação Visual)*
-      * **[Grupo Muscular]:** Explicação. (ex: "Quadríceps: Excelente volume na parte externa da coxa, dando aspecto de perna torneada.")
-      
-      # ⚠️ PONTOS DE MELHORIA (O FOCO)
-      *(Liste 3 prioridades. Explique COMO vamos resolver)*
-      * **[Prioridade 1]:** O problema e a solução. (ex: "Deltóide Lateral: O ombro está estreito em relação ao quadril. Vamos focar em elevações para alargar a silhueta.")
-      * **[Prioridade 2]:** ...
-      * **[Postura/Simetria]:** ...
-
-      # 🎯 VEREDITO E ESTRATÉGIA
-      *(Resumo de 2 linhas falando diretamente com o aluno sobre o plano de ataque)*
+      ESTRUTURA JSON OBRIGATÓRIA:
+      {
+        "frente": "Descreva detalhadamente a vista frontal. Fale sobre a largura de ombros, depois desça para o peitoral/busto, analise a linha de cintura (gordura visceral vs subcutânea) e finalize analisando o volume e corte das pernas (quadríceps).",
+        "perfil": "Foco total em postura e alinhamento. Analise se há protusão abdominal, lordose ou cifose. Analise o volume do glúteo e a harmonia entre tronco e membros inferiores.",
+        "costas": "Seja crítico. Procure gordura na linha do sutiã/lombar. Analise a densidade muscular, largura da dorsal e se os posteriores de coxa acompanham o glúteo.",
+        "veredito": "Sua estratégia final COMPLETA. Fale sobre a divisão de treino sugerida (ex: foco em deltoides), a estratégia nutricional (ex: ciclo de carboidratos) e cardio."
+      }
     `;
 
     const response = await openai.chat.completions.create({
@@ -70,15 +57,20 @@ export async function generateInitialAssessment(images: { label: string, base64:
           ],
         },
       ],
-      max_tokens: 1200,
-      temperature: 0.7, 
+      max_tokens: 2000, // Aumentei para permitir textos maiores
+      temperature: 0.5,
+      response_format: { type: "json_object" } 
     });
 
     const text = response.choices[0]?.message?.content;
-
     if (!text) return { error: "A IA não retornou texto." };
 
-    return { text };
+    try {
+        const json = JSON.parse(text);
+        return { data: json }; 
+    } catch (e) {
+        return { error: "Erro ao processar resposta da IA." };
+    }
 
   } catch (error: any) {
     console.error("Erro OpenAI:", error);

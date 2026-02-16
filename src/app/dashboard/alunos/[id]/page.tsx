@@ -1,17 +1,43 @@
-import { createClient } from "@/lib/supabase-server";
+"use client";
+
+import { createClient } from "@/lib/supabase";
 import { 
   ArrowLeft, Weight, TrendingDown, Calendar, 
   Image as ImageIcon, Plus, Sparkles, Activity, 
-  ClipboardList, ScanEye // <--- NOVO ÍCONE
+  ClipboardList, ScanEye, BrainCircuit, Printer
 } from "lucide-react";
 import Link from "next/link";
 import PhotoComparator from "@/components/PhotoComparator";
 import FeedbackForm from "@/components/FeedbackForm";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 
-// Card de Status Neon
+// --- FUNÇÃO AUXILIAR DE PARSE (Lê o texto da IA e separa em páginas) ---
+function parseReportStructure(content: string, photos: string[] = []) {
+    const sections: any = {};
+    const rawSegments = content.split('\n## ');
+    
+    rawSegments.forEach(segment => {
+        const fullSegment = segment.startsWith('##') ? segment : `## ${segment}`;
+        const cleanText = fullSegment.replace(/## .*?\n/, '').trim();
+
+        if (fullSegment.includes('FRENTE')) {
+            sections.frente = { text: cleanText, photo: photos[0] || null };
+        } else if (fullSegment.includes('PERFIL')) {
+            sections.perfil = { text: cleanText, photo: photos[1] || null };
+        } else if (fullSegment.includes('COSTAS')) {
+            sections.costas = { text: cleanText, photo: photos[2] || null };
+        } else if (fullSegment.includes('VEREDITO') || fullSegment.includes('Estratégia')) {
+            sections.veredito = cleanText;
+        }
+    });
+    return sections;
+}
+
+// Componente Card de Status (Visual Neon)
 function StatusCard({ label, value, icon, color = "text-white" }: any) {
     return (
-        <div className="bg-zinc-950 border border-zinc-900 p-5 rounded-2xl flex flex-col justify-between h-28 relative overflow-hidden group hover:border-zinc-800 transition-colors">
+        <div className="bg-zinc-950 border border-zinc-900 p-5 rounded-2xl flex flex-col justify-between h-28 relative overflow-hidden group hover:border-zinc-800 transition-colors print:hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10 scale-125 origin-top-right group-hover:text-brand transition-colors">
                 {icon}
             </div>
@@ -21,218 +47,297 @@ function StatusCard({ label, value, icon, color = "text-white" }: any) {
     )
 }
 
-export default async function AlunoDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const studentId = resolvedParams.id;
+export default function AlunoDetalhesPage() {
+  const params = useParams();
+  const studentId = params.id as string;
+  const [student, setStudent] = useState<any>(null);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [stats, setStats] = useState({ current: 0, diff: 0, count: 0, assessCount: 0 });
   
-  const supabase = await createClient();
+  // Estado que controla o ID do item sendo impresso
+  const [printingId, setPrintingId] = useState<string | null>(null);
+  
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-  const { data: student } = await supabase.from('profiles').select('*').eq('id', studentId).single();
+  useEffect(() => {
+    async function loadData() {
+        const { data: sData } = await supabase.from('profiles').select('*').eq('id', studentId).single();
+        setStudent(sData);
 
-  if (!student) return <div className="text-zinc-500 p-10 font-bold uppercase">Aluno não encontrado</div>;
+        const { data: checkinData } = await supabase.from('checkins').select('*, photos(*)').eq('user_id', studentId).order('created_at', { ascending: false });
+        const { data: assessData } = await supabase.from('assessments').select('*').eq('student_id', studentId).order('created_at', { ascending: false });
 
-  const { data: rawCheckins } = await supabase
-    .from('checkins')
-    .select('*, photos(*)')
-    .eq('user_id', studentId)
-    .order('created_at', { ascending: false });
+        const checkins = checkinData?.map(c => ({ 
+            ...c, 
+            type: 'checkin',
+            date: new Date(c.created_at),
+            photos: c.photos?.map((photo: any) => {
+                const { data } = supabase.storage.from('checkin-photos').getPublicUrl(photo.storage_path);
+                return { ...photo, url: data.publicUrl };
+            })
+        })) || [];
 
-  const checkins = rawCheckins?.map(checkin => ({
-    ...checkin,
-    photos: checkin.photos?.map((photo: any) => {
-      const { data } = supabase.storage.from('checkin-photos').getPublicUrl(photo.storage_path);
-      return { ...photo, url: data.publicUrl };
-    })
-  })) || [];
+        const assessments = assessData?.map(a => ({
+            ...a,
+            type: 'assessment',
+            date: new Date(a.created_at)
+        })) || [];
 
-  const currentWeight = checkins[0]?.weight || 0;
-  const initialWeight = checkins[checkins.length - 1]?.weight || 0;
-  const weightDiff = currentWeight - initialWeight;
+        const unified = [...checkins, ...assessments].sort((a, b) => b.date.getTime() - a.date.getTime());
+        setTimeline(unified);
+
+        const current = checkins[0]?.weight || 0;
+        const initial = checkins[checkins.length - 1]?.weight || 0;
+        setStats({
+            current,
+            diff: current - initial,
+            count: checkins.length,
+            assessCount: assessments.length
+        });
+    }
+    loadData();
+  }, [studentId]);
+
+  const handlePrint = (id: string) => {
+    setPrintingId(id);
+    // Delay de 300ms para garantir que o React renderize o bloco oculto antes do browser abrir o diálogo
+    setTimeout(() => {
+        window.print();
+        setPrintingId(null); 
+    }, 300);
+  };
+
+  if (!student) return <div className="text-zinc-500 p-10 font-bold uppercase text-center">Carregando dados do aluno...</div>;
+
+  // Header que se repete em todas as páginas do PDF
+  const PrintHeader = ({ date }: { date: string }) => (
+    <div className="flex justify-between items-center mb-8 pb-4 border-b-2 border-black">
+        <div>
+            <h1 className="text-2xl font-black uppercase tracking-tighter text-black">Relatório Técnico</h1>
+            <p className="text-sm font-bold uppercase text-zinc-600">Aluno: {student.full_name}</p>
+        </div>
+        <div className="text-right">
+            <p className="text-sm font-bold text-zinc-600 uppercase">Data da Avaliação</p>
+            <p className="text-lg font-black text-black">{date}</p>
+        </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-black pb-20 text-white font-sans">
+    <div className="min-h-screen bg-black pb-20 text-white font-sans relative">
       
-      {/* HEADER DARK NEON */}
-      <div className="bg-black border-b border-zinc-900 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      {/* --- CSS DE IMPRESSÃO (CORREÇÃO DA TELA BRANCA) --- */}
+      {/* Esta lógica esconde o site (body) e mostra SÓ o #print-area com fundo branco */}
+      <style jsx global>{`
+        @media print {
+          /* Esconde tudo no corpo da página */
+          body * { visibility: hidden; }
+          
+          /* Força fundo branco e texto preto na raiz */
+          body { 
+            background-color: white !important; 
+            color: black !important;
+          }
+          
+          /* Mostra APENAS a área de impressão e seus filhos */
+          #print-area, #print-area * { 
+            visibility: visible; 
+          }
+          
+          /* Posiciona a área de impressão no topo absoluto do papel */
+          #print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            display: block !important;
+            background-color: white !important;
+          }
+
+          /* Configura a quebra de página */
+          .page-break { 
+            page-break-after: always; 
+            break-after: page;
+            min-height: 100vh;
+            padding: 20mm;
+            background: white !important;
+            display: flex;
+            flex-direction: column;
+          }
+          
+          /* Garante que imagens e textos fiquem visíveis no papel */
+          h1, h2, h3, p, span { color: black !important; }
+          img { max-height: 48vh; object-fit: contain; }
+        }
+
+        /* Esconde a área de impressão enquanto navega no site */
+        #print-area { display: none; }
+      `}</style>
+
+      {/* --- HEADER DO SITE (VISÍVEL NA TELA) --- */}
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 print:hidden">
+        
+        <div className="flex items-center justify-between border-b border-zinc-900 pb-6">
             <div className="flex items-center gap-4">
-                <Link href="/dashboard/alunos" className="p-2 text-zinc-500 hover:text-lime-400 transition-colors">
+                <Link href="/dashboard/alunos" className="p-2 text-zinc-500 hover:text-brand transition-colors">
                     <ArrowLeft size={24} />
                 </Link>
-                <div>
-                    <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3">
-                        {student.full_name}
-                        {student.selected_goal && (
-                            <span className="text-[10px] bg-zinc-900 text-lime-400 border border-zinc-800 px-2 py-0.5 rounded not-italic font-bold tracking-widest">
-                                {student.selected_goal.replace('_', ' ')}
-                            </span>
-                        )}
-                    </h1>
-                </div>
+                <h1 className="text-2xl font-black italic tracking-tighter uppercase">{student.full_name}</h1>
             </div>
-
-            <div className="flex items-center gap-3">
-                 
-                 {/* NOVO BOTÃO: DIAGNÓSTICO INICIAL (RAIO-X) */}
-                 <Link 
-                   href={`/dashboard/alunos/${studentId}/diagnostico`}
-                   className="hidden md:flex items-center gap-2 bg-zinc-900 text-blue-400 border border-zinc-800 hover:border-blue-500 hover:text-white px-4 py-2 rounded-xl font-black uppercase tracking-wider text-xs transition-all shadow-[0_0_10px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]"
-                 >
-                   <ScanEye size={16} />
-                   Raio-X
+            <div className="flex gap-3">
+                 <Link href={`/dashboard/alunos/${studentId}/diagnostico`} className="bg-zinc-900 text-blue-400 border border-zinc-800 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2">
+                    <ScanEye size={16} /> Raio-X
                  </Link>
-
-                 {/* Botão IA */}
-                 <Link 
-                   href={`/dashboard/alunos/${studentId}/comparativo`}
-                   className="hidden md:flex items-center gap-2 bg-zinc-900 text-lime-400 border border-zinc-800 hover:border-brand hover:text-white px-4 py-2 rounded-xl font-black uppercase tracking-wider text-xs transition-all"
-                 >
-                   <Sparkles size={16} />
-                   IA 4.0
+                 <Link href={`/dashboard/alunos/${studentId}/comparativo`} className="bg-zinc-900 text-brand border border-zinc-800 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2">
+                    <Sparkles size={16} /> IA 4.0
                  </Link>
-
-                 {/* Novo Check-in */}
-                 <Link 
-                   href={`/dashboard/alunos/${studentId}/novo-checkin`}
-                   className="flex items-center gap-2 bg-brand hover:bg-lime-400 text-black px-5 py-2 rounded-xl font-black uppercase tracking-wider text-xs transition-colors shadow-[0_0_15px_rgba(132,204,22,0.3)] hover:shadow-[0_0_25px_rgba(132,204,22,0.5)]"
-                 >
-                   <Plus size={18} />
-                   <span className="hidden sm:inline">Novo Check-in</span>
+                 <Link href={`/dashboard/alunos/${studentId}/novo-checkin`} className="bg-brand text-black px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2">
+                    <Plus size={16} /> Novo Check-in
                  </Link>
             </div>
         </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
 
         {/* STATS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatusCard 
-                label="Peso Atual" 
-                value={`${currentWeight} kg`} 
-                icon={<Weight size={24} className="text-brand"/>}
-            />
-            <StatusCard 
-                label="Evolução" 
-                value={`${weightDiff > 0 ? '+' : ''}${weightDiff.toFixed(1)} kg`} 
-                color={weightDiff <= 0 ? "text-lime-400" : "text-red-500"}
-                icon={<TrendingDown size={24} className={weightDiff <= 0 ? "text-brand" : "text-red-500"}/>}
-            />
-            <StatusCard 
-                label="Check-ins" 
-                value={checkins.length} 
-                icon={<Calendar size={24} className="text-zinc-500"/>}
-            />
-            <StatusCard 
-                label="Frequência" 
-                value="Alta" 
-                icon={<Activity size={24} className="text-blue-500"/>}
-            />
+            <StatusCard label="Peso Atual" value={`${stats.current} kg`} icon={<Weight size={24} className="text-brand"/>} />
+            <StatusCard label="Evolução" value={`${stats.diff > 0 ? '+' : ''}${stats.diff.toFixed(1)} kg`} color={stats.diff <= 0 ? "text-brand" : "text-red-500"} icon={<TrendingDown size={24}/>} />
+            <StatusCard label="Check-ins" value={stats.count} icon={<Calendar size={24} className="text-zinc-500"/>} />
+            <StatusCard label="Avaliações" value={stats.assessCount} icon={<BrainCircuit size={24} className="text-blue-500"/>} />
         </div>
 
-        {/* COMPARADOR (Contido) */}
+        {/* COMPARADOR RÁPIDO */}
         <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 blur-[100px] rounded-full pointer-events-none"></div>
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-900 relative z-10">
-                <div className="p-2 bg-brand/10 rounded-lg text-brand">
-                    <ImageIcon size={20} />
-                </div>
+                <div className="p-2 bg-brand/10 rounded-lg text-brand"><ImageIcon size={20} /></div>
                 <div>
                     <h2 className="text-lg font-black text-white uppercase tracking-tight">Comparador Rápido</h2>
-                    <p className="text-xs text-zinc-500 font-bold tracking-wide">Evolução visual lado a lado</p>
+                    <p className="text-xs text-zinc-500 font-bold tracking-wide">Evolução visual</p>
                 </div>
             </div>
             <div className="relative z-10">
-                <PhotoComparator checkins={checkins} /> 
+                <PhotoComparator checkins={timeline.filter(t => t.type === 'checkin')} /> 
             </div>
         </div>
 
-        {/* PRONTUÁRIO */}
-        <div>
-            <h2 className="text-lg font-black text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
-                <ClipboardList className="text-zinc-600" size={24}/> Prontuário do Atleta
-            </h2>
-            
-            <div className="space-y-6">
-                {checkins.length === 0 && (
-                    <div className="text-center py-16 bg-zinc-950 rounded-2xl border-2 border-dashed border-zinc-900">
-                        <p className="text-zinc-600 font-bold uppercase text-xs tracking-widest">Nenhum registro encontrado</p>
-                    </div>
-                )}
-
-                {checkins.map((checkin) => (
-                    <div key={checkin.id} className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 hover:border-brand/30 transition-colors duration-300 group">
-                        <div className="flex flex-col md:flex-row gap-8">
-                            
-                            {/* Data e Peso */}
-                            <div className="flex md:flex-col items-center md:items-start justify-between md:justify-start gap-1 md:w-32 md:border-r md:border-zinc-900 md:pr-6 shrink-0">
-                                <div>
-                                    <span className="text-4xl font-black text-white tracking-tighter block leading-none">
-                                        {new Date(checkin.created_at).getDate()}
-                                    </span>
-                                    <span className="text-xs text-brand uppercase font-black tracking-widest">
-                                        {new Date(checkin.created_at).toLocaleString('pt-BR', { month: 'short' })}
-                                    </span>
-                                    <span className="text-[10px] text-zinc-600 block mt-1 font-bold">
-                                        {new Date(checkin.created_at).getFullYear()}
-                                    </span>
-                                </div>
-                                <div className="mt-0 md:mt-6 text-right md:text-left bg-black px-3 py-1 rounded border border-zinc-800">
-                                    <span className="block text-lg font-mono font-bold text-white">
-                                        {checkin.weight}kg
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Conteúdo */}
-                            <div className="flex-1 space-y-6">
-                                {checkin.notes && (
-                                    <div className="bg-black p-4 rounded-xl border border-zinc-900 relative">
-                                        <p className="text-[10px] text-zinc-500 font-black uppercase mb-2">Relato do Aluno</p>
-                                        <p className="text-sm text-zinc-300 italic leading-relaxed">
-                                            "{checkin.notes}"
-                                        </p>
-                                    </div>
-                                )}
-
-                                {checkin.photos && checkin.photos.length > 0 && (
-                                    <div>
-                                        <p className="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Evidências</p>
-                                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
-                                            {checkin.photos.map((p: any) => (
-                                                <a 
-                                                    key={p.id} 
-                                                    href={p.url} 
-                                                    target="_blank" 
-                                                    className="relative w-20 h-28 bg-black rounded-lg border border-zinc-800 shrink-0 hover:border-brand transition-all overflow-hidden group/img"
-                                                >
-                                                    {/* CORREÇÃO DO ALINHAMENTO */}
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img 
-                                                        src={p.url} 
-                                                        className="w-full h-full object-cover object-top opacity-80 group-hover/img:opacity-100 transition-opacity" 
-                                                        alt={p.pose_label}
-                                                    />
-                                                </a>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="pt-4 border-t border-zinc-900">
-                                     <FeedbackForm 
-                                        checkinId={checkin.id} 
-                                        studentId={studentId} 
-                                        initialFeedback={checkin.feedback}
-                                     />
-                                </div>
+        {/* LISTA DO PRONTUÁRIO (VISUAL TELA) */}
+        <div className="space-y-6">
+            <h2 className="text-lg font-black uppercase tracking-tight flex items-center gap-2"><ClipboardList className="text-zinc-600"/> Prontuário do Aluno</h2>
+            {timeline.map((item: any) => (
+                <div key={item.id} className={`p-6 rounded-2xl border ${item.type === 'assessment' ? 'bg-zinc-950/50 border-blue-500/20' : 'bg-zinc-950 border-zinc-900'}`}>
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex gap-3">
+                            {item.type === 'assessment' ? <BrainCircuit className="text-blue-400" /> : <Calendar className="text-brand" />}
+                            <div>
+                                <h3 className="font-bold text-sm uppercase">{item.type === 'assessment' ? "Análise Técnica Visual" : "Check-in Físico"}</h3>
+                                <p className="text-[10px] text-zinc-500 font-bold">{new Date(item.created_at).toLocaleString('pt-BR')}</p>
                             </div>
                         </div>
+                        
+                        {/* Botão de Imprimir (Apenas para Avaliações IA) */}
+                        {item.type === 'assessment' && (
+                            <button 
+                                onClick={() => handlePrint(item.id)} 
+                                className="p-2 bg-zinc-900 rounded-lg text-zinc-400 hover:text-white transition-colors border border-zinc-800" 
+                                title="Imprimir PDF (4 Páginas)"
+                            >
+                                <Printer size={18} />
+                            </button>
+                        )}
                     </div>
-                ))}
-            </div>
-        </div>
 
+                    {/* Fotos no Card da Tela (Miniaturas) */}
+                    {item.type === 'assessment' && item.photos && (
+                         <div className="flex gap-2 mb-4 overflow-hidden">
+                            {item.photos.map((url: string, idx: number) => (
+                                <img key={idx} src={url} className="w-16 h-20 object-cover rounded-lg border border-zinc-800 opacity-60 hover:opacity-100 transition-opacity" />
+                            ))}
+                         </div>
+                    )}
+                    
+                    {/* Texto do Relatório na Tela */}
+                    <div className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{item.content || item.notes}</div>
+                </div>
+            ))}
+        </div>
+      </div>
+
+      {/* --- ÁREA DE IMPRESSÃO (OCULTA NO SITE, EXIBIDA NO PDF) --- */}
+      {/* Este bloco é renderizado condicionalmente pelo printingId */}
+      <div id="print-area">
+        {printingId && timeline.map((item: any) => {
+            // Filtra apenas o item que foi clicado para impressão
+            if (item.id !== printingId || item.type !== 'assessment') return null;
+            
+            // Processa o Markdown para separar as seções
+            const report = parseReportStructure(item.content, item.photos);
+            const dateStr = new Date(item.created_at).toLocaleDateString('pt-BR');
+
+            return (
+                <div key={item.id}>
+                    {/* --- PÁGINA 1: FRENTE --- */}
+                    <div className="page-break">
+                        <PrintHeader date={dateStr} />
+                        <h2 className="text-xl font-black uppercase mb-6 border-b pb-2">Vista Frontal</h2>
+                        {report.frente?.photo && (
+                            <div className="w-full flex justify-center mb-8 bg-zinc-50 rounded-xl overflow-hidden border border-zinc-200">
+                                <img src={report.frente.photo} alt="Frente" className="object-contain" />
+                            </div>
+                        )}
+                        <h3 className="text-xs font-bold uppercase text-zinc-400 mb-2">Parecer do Coach:</h3>
+                        <p className="text-base text-justify font-medium leading-relaxed">{report.frente?.text}</p>
+                        <div className="flex-1"></div> {/* Espaço para não cortar */}
+                    </div>
+
+                    {/* --- PÁGINA 2: PERFIL --- */}
+                    <div className="page-break">
+                        <PrintHeader date={dateStr} />
+                        <h2 className="text-xl font-black uppercase mb-6 border-b pb-2">Vista Lateral</h2>
+                        {report.perfil?.photo && (
+                            <div className="w-full flex justify-center mb-8 bg-zinc-50 rounded-xl overflow-hidden border border-zinc-200">
+                                <img src={report.perfil.photo} alt="Perfil" className="object-contain" />
+                            </div>
+                        )}
+                        <h3 className="text-xs font-bold uppercase text-zinc-400 mb-2">Parecer do Coach:</h3>
+                        <p className="text-base text-justify font-medium leading-relaxed">{report.perfil?.text}</p>
+                        <div className="flex-1"></div>
+                    </div>
+
+                    {/* --- PÁGINA 3: COSTAS --- */}
+                    <div className="page-break">
+                        <PrintHeader date={dateStr} />
+                        <h2 className="text-xl font-black uppercase mb-6 border-b pb-2">Vista Dorsal</h2>
+                        {report.costas?.photo && (
+                            <div className="w-full flex justify-center mb-8 bg-zinc-50 rounded-xl overflow-hidden border border-zinc-200">
+                                <img src={report.costas.photo} alt="Costas" className="object-contain" />
+                            </div>
+                        )}
+                        <h3 className="text-xs font-bold uppercase text-zinc-400 mb-2">Parecer do Coach:</h3>
+                        <p className="text-base text-justify font-medium leading-relaxed">{report.costas?.text}</p>
+                        <div className="flex-1"></div>
+                    </div>
+
+                    {/* --- PÁGINA 4: VEREDITO --- */}
+                    <div className="page-break">
+                        <div className="mt-10 flex-1">
+                            <h1 className="text-3xl font-black uppercase mb-10 border-b-4 border-black pb-4 text-center">🎯 Estratégia & Veredito Final</h1>
+                            <p className="text-xl leading-relaxed text-justify px-10 font-medium">{report.veredito}</p>
+                        </div>
+                        
+                        {/* Assinatura no rodapé */}
+                        <div className="mt-auto pt-10 border-t border-zinc-300 flex justify-between items-end mx-10">
+                            <div>
+                                <div className="h-px bg-black w-64 mb-2"></div>
+                                <p className="text-xs font-bold uppercase tracking-widest">Paulo Adriano - Coach Responsável</p>
+                            </div>
+                            <p className="text-sm font-black italic opacity-30 tracking-tighter">COACHPRO SYSTEM</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        })}
       </div>
     </div>
   );

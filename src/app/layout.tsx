@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css"; 
-import Navbar from "@/components/Navbar"; 
-import NavbarWrapper from "@/components/NavbarWrapper"; 
+// REMOVI AS IMPORTAÇÕES DA NAVBAR AQUI
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Fitness SaaS",
+  title: "CoachPro SaaS",
   description: "Sistema de Avaliação Física de Alta Performance",
 };
 
@@ -18,14 +17,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      {/* MUDANÇA: bg-black text-white (Fim do Slate/Azul) */}
       <body className={`${inter.className} bg-black text-white antialiased selection:bg-brand selection:text-black`}>
+        {/* SEM NAVBAR AQUI - Ela agora vive apenas dentro do Dashboard */}
         
-        <NavbarWrapper>
-            <Navbar />
-        </NavbarWrapper>
-        
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main>
           {children}
         </main>
       </body>

@@ -34,7 +34,7 @@ function parseReportStructure(content: string, photos: string[] = []) {
     return sections;
 }
 
-// Componente Card de Status (Visual Neon)
+// Componente Card de Status (Visual Neon) - Ajustado para não estourar no mobile
 function StatusCard({ label, value, icon, color = "text-white" }: any) {
     return (
         <div className="bg-zinc-950 border border-zinc-900 p-5 rounded-2xl flex flex-col justify-between h-28 relative overflow-hidden group hover:border-zinc-800 transition-colors print:hidden">
@@ -130,24 +130,11 @@ export default function AlunoDetalhesPage() {
     <div className="min-h-screen bg-black pb-20 text-white font-sans relative">
       
       {/* --- CSS DE IMPRESSÃO (CORREÇÃO DA TELA BRANCA) --- */}
-      {/* Esta lógica esconde o site (body) e mostra SÓ o #print-area com fundo branco */}
       <style jsx global>{`
         @media print {
-          /* Esconde tudo no corpo da página */
           body * { visibility: hidden; }
-          
-          /* Força fundo branco e texto preto na raiz */
-          body { 
-            background-color: white !important; 
-            color: black !important;
-          }
-          
-          /* Mostra APENAS a área de impressão e seus filhos */
-          #print-area, #print-area * { 
-            visibility: visible; 
-          }
-          
-          /* Posiciona a área de impressão no topo absoluto do papel */
+          body { background-color: white !important; color: black !important; }
+          #print-area, #print-area * { visibility: visible; }
           #print-area {
             position: absolute;
             left: 0;
@@ -156,8 +143,6 @@ export default function AlunoDetalhesPage() {
             display: block !important;
             background-color: white !important;
           }
-
-          /* Configura a quebra de página */
           .page-break { 
             page-break-after: always; 
             break-after: page;
@@ -167,40 +152,38 @@ export default function AlunoDetalhesPage() {
             display: flex;
             flex-direction: column;
           }
-          
-          /* Garante que imagens e textos fiquem visíveis no papel */
           h1, h2, h3, p, span { color: black !important; }
           img { max-height: 48vh; object-fit: contain; }
         }
-
-        /* Esconde a área de impressão enquanto navega no site */
         #print-area { display: none; }
       `}</style>
 
       {/* --- HEADER DO SITE (VISÍVEL NA TELA) --- */}
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 print:hidden">
         
-        <div className="flex items-center justify-between border-b border-zinc-900 pb-6">
+        {/* CABEÇALHO RESPONSIVO: No mobile vira coluna, no desktop linha */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-zinc-900 pb-6 gap-4">
             <div className="flex items-center gap-4">
                 <Link href="/dashboard/alunos" className="p-2 text-zinc-500 hover:text-brand transition-colors">
                     <ArrowLeft size={24} />
                 </Link>
                 <h1 className="text-2xl font-black italic tracking-tighter uppercase">{student.full_name}</h1>
             </div>
-            <div className="flex gap-3">
-                 <Link href={`/dashboard/alunos/${studentId}/diagnostico`} className="bg-zinc-900 text-blue-400 border border-zinc-800 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2">
+            {/* Botões de Ação: Grid de 2 no mobile, Flex no desktop */}
+            <div className="grid grid-cols-2 md:flex gap-3 w-full md:w-auto">
+                 <Link href={`/dashboard/alunos/${studentId}/diagnostico`} className="bg-zinc-900 text-blue-400 border border-zinc-800 px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
                     <ScanEye size={16} /> Raio-X
                  </Link>
-                 <Link href={`/dashboard/alunos/${studentId}/comparativo`} className="bg-zinc-900 text-brand border border-zinc-800 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2">
+                 <Link href={`/dashboard/alunos/${studentId}/comparativo`} className="bg-zinc-900 text-brand border border-zinc-800 px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
                     <Sparkles size={16} /> IA 4.0
                  </Link>
-                 <Link href={`/dashboard/alunos/${studentId}/novo-checkin`} className="bg-brand text-black px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2">
+                 <Link href={`/dashboard/alunos/${studentId}/novo-checkin`} className="bg-brand text-black px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 col-span-2 md:col-span-1">
                     <Plus size={16} /> Novo Check-in
                  </Link>
             </div>
         </div>
 
-        {/* STATS */}
+        {/* STATS: Grid de 2 colunas no mobile, 4 no desktop */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatusCard label="Peso Atual" value={`${stats.current} kg`} icon={<Weight size={24} className="text-brand"/>} />
             <StatusCard label="Evolução" value={`${stats.diff > 0 ? '+' : ''}${stats.diff.toFixed(1)} kg`} color={stats.diff <= 0 ? "text-brand" : "text-red-500"} icon={<TrendingDown size={24}/>} />
@@ -265,13 +248,10 @@ export default function AlunoDetalhesPage() {
       </div>
 
       {/* --- ÁREA DE IMPRESSÃO (OCULTA NO SITE, EXIBIDA NO PDF) --- */}
-      {/* Este bloco é renderizado condicionalmente pelo printingId */}
       <div id="print-area">
         {printingId && timeline.map((item: any) => {
-            // Filtra apenas o item que foi clicado para impressão
             if (item.id !== printingId || item.type !== 'assessment') return null;
             
-            // Processa o Markdown para separar as seções
             const report = parseReportStructure(item.content, item.photos);
             const dateStr = new Date(item.created_at).toLocaleDateString('pt-BR');
 
@@ -288,7 +268,7 @@ export default function AlunoDetalhesPage() {
                         )}
                         <h3 className="text-xs font-bold uppercase text-zinc-400 mb-2">Parecer do Coach:</h3>
                         <p className="text-base text-justify font-medium leading-relaxed">{report.frente?.text}</p>
-                        <div className="flex-1"></div> {/* Espaço para não cortar */}
+                        <div className="flex-1"></div>
                     </div>
 
                     {/* --- PÁGINA 2: PERFIL --- */}
@@ -326,7 +306,6 @@ export default function AlunoDetalhesPage() {
                             <p className="text-xl leading-relaxed text-justify px-10 font-medium">{report.veredito}</p>
                         </div>
                         
-                        {/* Assinatura no rodapé */}
                         <div className="mt-auto pt-10 border-t border-zinc-300 flex justify-between items-end mx-10">
                             <div>
                                 <div className="h-px bg-black w-64 mb-2"></div>

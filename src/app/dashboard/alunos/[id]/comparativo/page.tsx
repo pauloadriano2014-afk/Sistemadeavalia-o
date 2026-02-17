@@ -66,8 +66,8 @@ export default function ComparativoPage() {
       setStudent(profile);
 
       let templateKey = 'default';
-      const goal = profile.selected_goal || 'emagrecimento';
-      const rawGender = profile.gender?.toLowerCase() || 'female';
+      const goal = profile?.selected_goal || 'emagrecimento';
+      const rawGender = profile?.gender?.toLowerCase() || 'female';
 
       let gender = 'feminino';
       if (rawGender === 'male' || rawGender === 'masculino') gender = 'masculino';
@@ -105,55 +105,66 @@ export default function ComparativoPage() {
     setAnalyzing(true);
     setResult("");
 
-    const validPairs: ImagePair[] = [];
-    activePoses.forEach(pose => {
-        const slot = slots[pose];
-        if (slot?.before && slot?.after) {
-            validPairs.push({ poseLabel: pose, before: slot.before!, after: slot.after! });
+    try {
+        const validPairs: ImagePair[] = [];
+        activePoses.forEach(pose => {
+            const slot = slots[pose];
+            if (slot?.before && slot?.after) {
+                validPairs.push({ poseLabel: pose, before: slot.before!, after: slot.after! });
+            }
+        });
+
+        if (validPairs.length === 0) {
+            alert("Preencha pelo menos um par de fotos (Antes e Depois).");
+            setAnalyzing(false);
+            return;
         }
-    });
 
-    if (validPairs.length === 0) {
-        alert("Preencha pelo menos um par de fotos (Antes e Depois).");
+        let formattedCardio = "Não realiza cardio";
+        if (cardioType !== "nenhum") {
+            formattedCardio = `${cardioType.replace('_', ' ')} (${cardioIntensity}) - Gasto: ~${cardioBurn}kcal`;
+        }
+        
+        const formattedCalories = `${calorieRange} kcal`;
+
+        const context: CompareContext = {
+            name: student.full_name,
+            gender: student.gender,
+            goal: student.selected_goal,
+            age: ageRange,
+            frequency: frequency,
+            injuries: injuries,
+            tone: tone,
+            phase: phase,
+            dietCompliance: diet,
+            sleep: sleep,
+            ingestedCalories: formattedCalories,
+            cardioProtocol: formattedCardio,
+            weightBefore: weightBefore || "Não inf.",
+            weightAfter: weightAfter || "Não inf.",
+            coachContext: coachContext || "Sem contexto adicional."
+        };
+
+        const response = await analyzeEvolution(validPairs, context);
+        
+        if (response.error) {
+            alert(`Erro na IA: ${response.error}`);
+        } else {
+            setResult(response.text || "");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Erro de conexão ou tempo limite. Tente novamente com menos fotos ou verifique sua internet.");
+    } finally {
         setAnalyzing(false);
-        return;
     }
-
-    let formattedCardio = "Não realiza cardio";
-    if (cardioType !== "nenhum") {
-        formattedCardio = `${cardioType.replace('_', ' ')} (${cardioIntensity}) - Gasto: ~${cardioBurn}kcal`;
-    }
-    
-    const formattedCalories = `${calorieRange} kcal`;
-
-    const context: CompareContext = {
-        name: student.full_name,
-        gender: student.gender,
-        goal: student.selected_goal,
-        age: ageRange,
-        frequency: frequency,
-        injuries: injuries,
-        tone: tone,
-        phase: phase,
-        dietCompliance: diet,
-        sleep: sleep,
-        ingestedCalories: formattedCalories,
-        cardioProtocol: formattedCardio,
-        weightBefore: weightBefore || "Não inf.",
-        weightAfter: weightAfter || "Não inf.",
-        coachContext: coachContext || "Sem contexto adicional."
-    };
-
-    const response = await analyzeEvolution(validPairs, context);
-    if (response.error) alert(response.error);
-    else setResult(response.text || "");
-    setAnalyzing(false);
   };
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-brand font-bold uppercase tracking-widest animate-pulse">Carregando estúdio...</div>;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black text-white pb-20 print:bg-white print:p-0">
+    // ADICIONADO overflow-x-hidden PARA EVITAR TELA MOLE NO MOBILE
+    <div className="min-h-screen w-full overflow-x-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black text-white pb-20 print:bg-white print:p-0">
       
       {/* HEADER RESPONSIVO */}
         <div className="w-full max-w-7xl mx-auto px-4 md:px-6 py-6 mb-8 border-b border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-0 bg-black/90 backdrop-blur-md z-50 print:hidden">
@@ -292,7 +303,7 @@ export default function ComparativoPage() {
                 </div>
             </div>
 
-            {/* BOTÃO GERAR ANÁLISE (FIXO NO MOBILE PARA FACILITAR) */}
+            {/* BOTÃO GERAR ANÁLISE (FIXO NO MOBILE) */}
             <button onClick={runAI} disabled={analyzing} className="w-full bg-brand hover:bg-lime-400 text-black font-black uppercase tracking-widest py-4 rounded-xl shadow-[0_0_30px_rgba(132,204,22,0.4)] hover:shadow-[0_0_50px_rgba(132,204,22,0.6)] transition-all flex items-center justify-center gap-2 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed sticky bottom-4 z-40 md:static">
                 {analyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={18}/> GERAR ANÁLISE IA</>}
             </button>

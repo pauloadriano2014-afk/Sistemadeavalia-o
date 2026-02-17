@@ -4,12 +4,11 @@ import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useParams } from "next/navigation";
 import { analyzeEvolution, ImagePair, CompareContext } from "@/app/dashboard/actions/ai-compare";
-import { ArrowLeft, Sparkles, Loader2, Printer, X, PlusCircle, Upload, Flame, Activity, FileText, Calendar } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Printer, X, Upload, Flame, Activity, FileText, Calendar } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
 import imageCompression from 'browser-image-compression';
 
-// TEMPLATES CORRIGIDOS PARA PORTUGUÊS
 const POSE_TEMPLATES: any = {
     'emagrecimento': ['Frente', 'Perfil', 'Costas'],
     'hipertrofia_feminino': ['Frente', 'Perfil', 'Costas', 'Pernas', 'Glúteos'],
@@ -70,7 +69,6 @@ export default function ComparativoPage() {
       const goal = profile.selected_goal || 'emagrecimento';
       const rawGender = profile.gender?.toLowerCase() || 'female';
 
-      // --- CORREÇÃO DO GÊNERO AQUI TAMBÉM ---
       let gender = 'feminino';
       if (rawGender === 'male' || rawGender === 'masculino') gender = 'masculino';
 
@@ -157,14 +155,14 @@ export default function ComparativoPage() {
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black text-white pb-20 print:bg-white print:p-0">
       
-      {/* HEADER */}
-        <div className="w-full max-w-7xl mx-auto px-6 py-6 mb-8 border-b border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-0 bg-black/90 backdrop-blur-md z-50 print:hidden">
+      {/* HEADER RESPONSIVO */}
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 py-6 mb-8 border-b border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-0 bg-black/90 backdrop-blur-md z-50 print:hidden">
             <Link href={`/dashboard/alunos/${studentId}`} className="text-zinc-400 hover:text-lime-400 flex items-center gap-2 font-bold uppercase tracking-wider text-xs transition-colors shrink-0 group">
                 <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
                 <span>Voltar ao Prontuário</span>
             </Link>
 
-            <div className="flex flex-wrap items-center gap-2 md:gap-3 text-right">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto justify-between md:justify-end">
                 <div className="flex items-center gap-2">
                     <Sparkles className="text-brand shrink-0" size={20} /> 
                     <h1 className="text-lg md:text-2xl font-black text-white uppercase italic tracking-tighter leading-none">
@@ -177,12 +175,12 @@ export default function ComparativoPage() {
             </div>
         </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 px-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 px-4 md:px-6">
         
-        {/* ESQUERDA: CONTROLES */}
-        <div className="lg:col-span-4 space-y-6 print:hidden">
+        {/* ESQUERDA: CONTROLES (PARÂMETROS) */}
+        <div className="lg:col-span-4 space-y-6 print:hidden order-2 lg:order-1">
             
-            <div className="bg-zinc-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl space-y-5 shadow-2xl">
+            <div className="bg-zinc-900/80 backdrop-blur-xl border border-white/10 p-4 md:p-6 rounded-3xl space-y-5 shadow-2xl">
                 <div className="flex items-center gap-2 border-b border-white/5 pb-3">
                     <span className="flex h-2 w-2 relative">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
@@ -238,7 +236,7 @@ export default function ComparativoPage() {
                     </div>
                 </div>
 
-                {/* CALORIAS (SELETOR) */}
+                {/* CALORIAS */}
                 <div className="space-y-1">
                     <label className="text-[10px] text-zinc-400 font-bold flex items-center gap-2 mb-1 uppercase tracking-wider">
                         <Flame size={12} className="text-orange-500"/> Ingestão Calórica
@@ -253,7 +251,7 @@ export default function ComparativoPage() {
                     </select>
                 </div>
 
-                {/* CARDIO COMPLETO */}
+                {/* CARDIO */}
                 <div className="space-y-2 bg-black/20 p-3 rounded-xl border border-white/5">
                     <label className="text-[10px] text-zinc-400 font-bold flex items-center gap-2 mb-1 uppercase tracking-wider">
                         <Activity size={12} className="text-blue-500"/> Cardio & Gasto
@@ -270,7 +268,6 @@ export default function ComparativoPage() {
                             <option value="bike">Bike / Spinning</option>
                         </select>
 
-                        {/* Só mostra intensidade se não for "nenhum" */}
                         {cardioType !== "nenhum" && (
                             <div className="flex gap-2">
                                 <select value={cardioIntensity} onChange={e => setCardioIntensity(e.target.value)} className="flex-1 bg-black/50 border border-white/10 rounded-lg p-1.5 text-[10px] text-white focus:border-brand font-bold uppercase cursor-pointer">
@@ -295,17 +292,18 @@ export default function ComparativoPage() {
                 </div>
             </div>
 
-            <button onClick={runAI} disabled={analyzing} className="w-full bg-brand hover:bg-lime-400 text-black font-black uppercase tracking-widest py-4 rounded-xl shadow-[0_0_30px_rgba(132,204,22,0.4)] hover:shadow-[0_0_50px_rgba(132,204,22,0.6)] transition-all flex items-center justify-center gap-2 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+            {/* BOTÃO GERAR ANÁLISE (FIXO NO MOBILE PARA FACILITAR) */}
+            <button onClick={runAI} disabled={analyzing} className="w-full bg-brand hover:bg-lime-400 text-black font-black uppercase tracking-widest py-4 rounded-xl shadow-[0_0_30px_rgba(132,204,22,0.4)] hover:shadow-[0_0_50px_rgba(132,204,22,0.6)] transition-all flex items-center justify-center gap-2 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed sticky bottom-4 z-40 md:static">
                 {analyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={18}/> GERAR ANÁLISE IA</>}
             </button>
         </div>
 
-        {/* DIREITA: FOTOS (70%) */}
-        <div className="lg:col-span-8 space-y-8 pb-10">
+        {/* DIREITA: FOTOS (FICA EM CIMA NO MOBILE) */}
+        <div className="lg:col-span-8 space-y-8 pb-10 order-1 lg:order-2">
             <div className="print:hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {activePoses.map(pose => (
-                        <div key={pose} className="bg-zinc-900/80 border border-white/5 rounded-3xl p-5 hover:border-brand/20 transition-all duration-500">
+                        <div key={pose} className="bg-zinc-900/80 border border-white/5 rounded-3xl p-4 md:p-5 hover:border-brand/20 transition-all duration-500">
                             <h4 className="text-center text-[10px] font-black text-zinc-400 uppercase mb-4 tracking-[0.2em]">{pose}</h4>
                             <div className="flex gap-4 items-start">
                                 
@@ -327,7 +325,6 @@ export default function ComparativoPage() {
                                             <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSlotUpload(e, pose, 'before')} />
                                     </label>
                                     
-                                    {/* DATA FORÇADA BRANCA */}
                                     <div className="flex items-center gap-1 bg-black/30 border border-white/5 rounded-lg px-2 py-1">
                                             <Calendar size={10} className="text-zinc-500"/>
                                             <input 
@@ -340,7 +337,7 @@ export default function ComparativoPage() {
                                     </div>
                                 </div>
                                 
-                                <ArrowLeft className="text-zinc-700 rotate-180 mt-20" size={24}/>
+                                <ArrowLeft className="text-zinc-700 rotate-180 mt-20 hidden md:block" size={24}/>
 
                                 {/* LADO DIREITO (DEPOIS) */}
                                 <div className="flex-1 space-y-2">
@@ -379,13 +376,13 @@ export default function ComparativoPage() {
 
             {/* RESULTADO (Relatório) */}
             {result && (
-                <div className="bg-zinc-900 border border-white/10 p-10 rounded-3xl animate-in slide-in-from-bottom-10 shadow-2xl print:bg-white print:border-none print:p-0 print:text-black relative overflow-hidden">
+                <div className="bg-zinc-900 border border-white/10 p-6 md:p-10 rounded-3xl animate-in slide-in-from-bottom-10 shadow-2xl print:bg-white print:border-none print:p-0 print:text-black relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand via-emerald-500 to-brand"></div>
                     
-                    <div className="border-b border-white/10 print:border-gray-300 pb-8 mb-8 flex justify-between items-start">
+                    <div className="border-b border-white/10 print:border-gray-300 pb-8 mb-8 flex flex-col md:flex-row justify-between items-start gap-4">
                         <div>
-                            <h2 className="text-4xl font-black text-white print:text-black uppercase italic tracking-tighter">Relatório de Evolução</h2>
-                            <p className="text-zinc-400 print:text-gray-600 font-bold text-sm mt-2 uppercase tracking-wide">Atleta: <span className="text-brand">{student?.full_name}</span></p>
+                            <h2 className="text-2xl md:text-4xl font-black text-white print:text-black uppercase italic tracking-tighter">Relatório de Evolução</h2>
+                            <p className="text-zinc-400 print:text-gray-600 font-bold text-xs md:text-sm mt-2 uppercase tracking-wide">Atleta: <span className="text-brand">{student?.full_name}</span></p>
                             
                             <div className="flex flex-wrap gap-2 mt-6">
                                 {weightBefore && weightAfter && (
@@ -396,19 +393,18 @@ export default function ComparativoPage() {
                                 <span className="bg-black text-zinc-300 border border-white/10 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest">{phase}</span>
                             </div>
                         </div>
-                        <div className="print:hidden">
+                        <div className="print:hidden self-end md:self-start">
                             <button onClick={() => window.print()} className="p-3 bg-black hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-colors border border-white/10"><Printer size={20}/></button>
                         </div>
                     </div>
 
-                    <div className="prose prose-invert prose-headings:font-black prose-headings:uppercase prose-headings:text-lime-400 prose-p:text-zinc-300 prose-strong:text-white max-w-none print:prose-p:text-black print:prose-headings:text-black print:prose-strong:text-black whitespace-pre-wrap break-words">
+                    <div className="prose prose-invert prose-headings:font-black prose-headings:uppercase prose-headings:text-lime-400 prose-p:text-zinc-300 prose-strong:text-white max-w-none print:prose-p:text-black print:prose-headings:text-black print:prose-strong:text-black whitespace-pre-wrap break-words text-sm md:text-base">
                         <ReactMarkdown>{result}</ReactMarkdown>
                     </div>
 
-                    {/* Evidências no Print */}
                     <div className="mt-12 pt-8 border-t border-white/10 print:border-gray-300 print:break-inside-avoid">
                         <h4 className="text-xs font-black text-zinc-500 uppercase mb-6 tracking-widest">Evidências Visuais</h4>
-                        <div className="grid grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {activePoses.map(pose => {
                                 const s = slots[pose];
                                 if (!s.before || !s.after) return null;

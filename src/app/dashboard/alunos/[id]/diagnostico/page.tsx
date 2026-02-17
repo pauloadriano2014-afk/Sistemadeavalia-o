@@ -10,7 +10,6 @@ import { ArrowLeft, BrainCircuit, Loader2, Upload, ScanEye, Mic, Square, Trash2,
 import Link from "next/link";
 import imageCompression from 'browser-image-compression';
 
-
 const POSES = ['Frente', 'Perfil', 'Costas'];
 
 export default function DiagnosticoPage() {
@@ -30,9 +29,6 @@ export default function DiagnosticoPage() {
   const [history, setHistory] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   
-  // Controle de Anotação Visual
-  const [annotatingPose, setAnnotatingPose] = useState<string | null>(null);
-
   const [report, setReport] = useState<{
     frente: string;
     perfil: string;
@@ -167,48 +163,46 @@ export default function DiagnosticoPage() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-20">
-      <div className="max-w-6xl mx-auto px-6 py-8 border-b border-zinc-900 flex justify-between items-center sticky top-0 bg-black/95 backdrop-blur z-50">
+      {/* HEADER RESPONSIVO */}
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8 border-b border-zinc-900 flex justify-between items-center sticky top-0 bg-black/95 backdrop-blur z-50">
          <Link href={`/dashboard/alunos/${studentId}`} className="text-zinc-400 hover:text-white flex items-center gap-2 font-bold uppercase text-xs tracking-wider">
             <ArrowLeft size={16} /> Voltar
          </Link>
-         <h1 className="text-xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
-            <ScanEye className="text-brand" /> Análise Técnica Visual
+         <h1 className="text-lg md:text-xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
+            <ScanEye className="text-brand" size={20} /> <span className="hidden md:inline">Análise Técnica Visual</span><span className="md:hidden">Raio-X</span>
          </h1>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* COLUNA ESQUERDA: INPUTS (FOTOS E CONTEXTO) */}
         <div className="lg:col-span-4 space-y-6">
-            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
+            
+            {/* CARD DE FOTOS: Grid Responsivo (1 col mobile, 3 col desktop no card) */}
+            <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl space-y-4">
                 <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest">1. Fotos</h3>
-                <div className="grid grid-cols-3 gap-2">
+                {/* Aqui está a mágica: grid-cols-1 no mobile, grid-cols-3 se houver espaço interno */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {POSES.map(pose => (
-                        <div key={pose} className="group relative">
-                          <label className={`aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden transition-all ${photos[pose] ? 'border-brand' : 'border-zinc-800 hover:border-zinc-600'}`}>
+                        <div key={pose} className="group relative w-full">
+                          <label className={`w-full aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden transition-all ${photos[pose] ? 'border-brand' : 'border-zinc-800 hover:border-zinc-600'}`}>
                               {photos[pose] ? (
                                   <img src={photos[pose]!} className="w-full h-full object-cover" alt={pose} />
                               ) : (
-                                  <Upload size={20} className="text-zinc-600" />
+                                  <div className="flex flex-col items-center gap-2">
+                                      <Upload size={20} className="text-zinc-600" />
+                                      <span className="text-[10px] text-zinc-600 font-bold uppercase">{pose}</span>
+                                  </div>
                               )}
-                              <span className="absolute bottom-1 text-[8px] font-black uppercase bg-black/60 px-2 rounded text-white">{pose}</span>
                               <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e, pose)} />
                           </label>
-                          
-                          {/* BOTÃO DE ANOTAÇÃO */}
-                          {photos[pose] && (
-                            <button 
-                              onClick={() => setAnnotatingPose(pose)}
-                              className="absolute top-1 right-1 p-1.5 bg-brand text-black rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                              title="Anotar na foto"
-                            >
-                              <Edit3 size={14} />
-                            </button>
-                          )}
                         </div>
                     ))}
                 </div>
             </div>
 
-            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
+            {/* CARD DE CONTEXTO */}
+            <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl space-y-4">
                 <div className="flex justify-between items-center">
                     <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest">2. Contexto</h3>
                     <button 
@@ -216,13 +210,13 @@ export default function DiagnosticoPage() {
                         disabled={isTranscribing}
                         className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-all ${isRecording ? "bg-red-500/20 text-red-500 animate-pulse" : "bg-zinc-800 text-zinc-400"}`}
                     >
-                        {isTranscribing ? "..." : isRecording ? "Parar" : "Gravar"}
+                        {isTranscribing ? "..." : isRecording ? <><Mic size={12}/> Parar</> : <><Mic size={12}/> Gravar Áudio</>}
                     </button>
                 </div>
                 <textarea 
                     value={history}
                     onChange={(e) => setHistory(e.target.value)}
-                    placeholder="Relato do aluno..."
+                    placeholder="Descreva o objetivo, histórico de lesões ou observações..."
                     rows={4}
                     className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white focus:border-brand outline-none resize-none"
                 />
@@ -233,18 +227,19 @@ export default function DiagnosticoPage() {
             </button>
         </div>
 
+        {/* COLUNA DIREITA: RESULTADO (RELATÓRIO) */}
         <div className="lg:col-span-8 space-y-6">
             {!report && !analyzing && (
-                <div className="h-full flex flex-col items-center justify-center text-zinc-600 border-2 border-dashed border-zinc-900 rounded-2xl min-h-[400px]">
+                <div className="h-full flex flex-col items-center justify-center text-zinc-600 border-2 border-dashed border-zinc-900 rounded-2xl min-h-[300px] md:min-h-[400px] p-6 text-center">
                     <ScanEye size={48} className="mb-4 opacity-20" />
-                    <p className="text-sm font-bold uppercase tracking-widest opacity-50">Aguardando fotos...</p>
+                    <p className="text-sm font-bold uppercase tracking-widest opacity-50">Adicione as fotos para iniciar</p>
                 </div>
             )}
 
             {analyzing && (
-                 <div className="h-full flex flex-col items-center justify-center text-zinc-600 border-2 border-dashed border-zinc-900 rounded-2xl min-h-[400px]">
+                 <div className="h-full flex flex-col items-center justify-center text-zinc-600 border-2 border-dashed border-zinc-900 rounded-2xl min-h-[300px] md:min-h-[400px] p-6 text-center">
                     <Loader2 size={48} className="mb-4 text-brand animate-spin" />
-                    <p className="text-sm font-bold uppercase tracking-widest text-brand">Analisando cada detalhe...</p>
+                    <p className="text-sm font-bold uppercase tracking-widest text-brand">A IA está analisando a simetria...</p>
                 </div>
             )}
 
@@ -253,15 +248,9 @@ export default function DiagnosticoPage() {
                     {/* FRENTE */}
                     {photos['Frente'] && (
                         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden flex flex-col md:flex-row">
-                            <div className="md:w-1/3 bg-black relative border-r border-zinc-800 group">
+                            <div className="w-full md:w-1/3 bg-black relative border-b md:border-b-0 md:border-r border-zinc-800 h-64 md:h-auto">
                                 <img src={photos['Frente']!} className="w-full h-full object-cover" />
                                 <span className="absolute top-2 left-2 bg-black/80 text-white text-[10px] font-black uppercase px-2 py-1 rounded">Frente</span>
-                                <button 
-                                  onClick={() => setAnnotatingPose('Frente')}
-                                  className="absolute inset-0 bg-brand/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-black font-black uppercase text-xs"
-                                >
-                                    <Edit3 size={20} /> Anotar na Foto
-                                </button>
                             </div>
                             <div className="flex-1 p-4 flex flex-col">
                                 <textarea 
@@ -276,15 +265,9 @@ export default function DiagnosticoPage() {
                     {/* PERFIL */}
                     {photos['Perfil'] && (
                         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden flex flex-col md:flex-row">
-                            <div className="md:w-1/3 bg-black relative border-r border-zinc-800 group">
+                            <div className="w-full md:w-1/3 bg-black relative border-b md:border-b-0 md:border-r border-zinc-800 h-64 md:h-auto">
                                 <img src={photos['Perfil']!} className="w-full h-full object-cover" />
                                 <span className="absolute top-2 left-2 bg-black/80 text-white text-[10px] font-black uppercase px-2 py-1 rounded">Perfil</span>
-                                <button 
-                                  onClick={() => setAnnotatingPose('Perfil')}
-                                  className="absolute inset-0 bg-brand/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-black font-black uppercase text-xs"
-                                >
-                                    <Edit3 size={20} /> Anotar na Foto
-                                </button>
                             </div>
                             <div className="flex-1 p-4 flex flex-col">
                                 <textarea 
@@ -299,15 +282,9 @@ export default function DiagnosticoPage() {
                     {/* COSTAS */}
                     {photos['Costas'] && (
                         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden flex flex-col md:flex-row">
-                            <div className="md:w-1/3 bg-black relative border-r border-zinc-800 group">
+                            <div className="w-full md:w-1/3 bg-black relative border-b md:border-b-0 md:border-r border-zinc-800 h-64 md:h-auto">
                                 <img src={photos['Costas']!} className="w-full h-full object-cover" />
                                 <span className="absolute top-2 left-2 bg-black/80 text-white text-[10px] font-black uppercase px-2 py-1 rounded">Costas</span>
-                                <button 
-                                  onClick={() => setAnnotatingPose('Costas')}
-                                  className="absolute inset-0 bg-brand/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-black font-black uppercase text-xs"
-                                >
-                                    <Edit3 size={20} /> Anotar na Foto
-                                </button>
                             </div>
                             <div className="flex-1 p-4 flex flex-col">
                                 <textarea 
@@ -319,17 +296,20 @@ export default function DiagnosticoPage() {
                         </div>
                     )}
 
-                    <div className="bg-zinc-950 border border-brand/20 rounded-2xl p-6">
+                    {/* VEREDITO */}
+                    <div className="bg-zinc-950 border border-brand/20 rounded-2xl p-4 md:p-6">
                         <h3 className="text-lime-400 font-black uppercase tracking-widest text-sm mb-4">🎯 Estratégia & Veredito</h3>
                         <textarea 
                             value={report.veredito}
                             onChange={(e) => updateReport('veredito', e.target.value)}
-                            className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-sm text-white leading-relaxed focus:border-lime-400 outline-none resize-none min-h-[100px]"
+                            className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-sm text-white leading-relaxed focus:border-lime-400 outline-none resize-none min-h-[150px]"
                         />
                     </div>
 
-                    <div className="flex gap-4 border-t border-zinc-900 pt-4 sticky bottom-4">
-                        <button onClick={() => setReport(null)} className="px-6 py-4 rounded-xl border border-zinc-800 bg-black text-zinc-500 hover:text-red-500 hover:border-red-500 transition-all font-bold uppercase text-xs tracking-widest">Descartar</button>
+                    <div className="flex flex-col md:flex-row gap-4 border-t border-zinc-900 pt-4 sticky bottom-4 bg-black/80 backdrop-blur pb-4 md:pb-0">
+                        <button onClick={() => setReport(null)} className="w-full md:w-auto px-6 py-4 rounded-xl border border-zinc-800 bg-black text-zinc-500 hover:text-red-500 hover:border-red-500 transition-all font-bold uppercase text-xs tracking-widest">
+                            Descartar
+                        </button>
                         <button 
                             onClick={handleSaveToProntuario}
                             disabled={isSaving}
@@ -342,18 +322,6 @@ export default function DiagnosticoPage() {
             )}
         </div>
       </div>
-
-      {/* MODAL DE ANOTAÇÃO */}
-      {annotatingPose && (
-        <PhotoAnnotator 
-          imageUrl={photos[annotatingPose]!}
-          onCancel={() => setAnnotatingPose(null)}
-          onSave={(newImage) => {
-              setPhotos(prev => ({ ...prev, [annotatingPose]: newImage }));
-              setAnnotatingPose(null);
-          }}
-        />
-      )}
     </div>
   );
 }

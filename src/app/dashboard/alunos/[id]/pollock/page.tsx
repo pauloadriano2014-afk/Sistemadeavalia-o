@@ -35,7 +35,6 @@ export default function PollockPage() {
   const chunksRef = useRef<Blob[]>([]);
   const [results, setResults] = useState<{ bf: number, fatMass: number, leanMass: number } | null>(null);
 
-  // --- AUTO-SAVE OFFLINE (Segurança contra queda de rede) ---
   useEffect(() => {
     const savedData = localStorage.getItem(`pollock_draft_${studentId}`);
     if (savedData) {
@@ -50,18 +49,16 @@ export default function PollockPage() {
       const { data } = await supabase.from('profiles').select('*').eq('id', studentId).single();
       setStudent(data);
       if (!localStorage.getItem(`pollock_draft_${studentId}`)) {
-          setAge(30); // Padrão se for a primeira vez
+          setAge(30); 
       }
     }
     loadStudent();
   }, [studentId, supabase]);
 
-  // Salva no cache sempre que algo mudar
   useEffect(() => {
       localStorage.setItem(`pollock_draft_${studentId}`, JSON.stringify({ folds, circs, weight, age }));
   }, [folds, circs, weight, age, studentId]);
 
-  // --- LÓGICA DE ÁUDIO UNIFICADO ---
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -91,7 +88,6 @@ export default function PollockPage() {
           if (text) {
               const res = await extractMetricsFromTranscript(text);
               if (res.data) {
-                  // Mescla os dados novos com os antigos (o que for null da IA é ignorado)
                   setFolds(prev => {
                       const updated = { ...prev };
                       for (const k of FOLD_KEYS) { if (res.data.dobras?.[k] !== null) updated[k as keyof Folds] = res.data.dobras[k]; }
@@ -111,7 +107,6 @@ export default function PollockPage() {
       }
   };
 
-  // --- CÁLCULO POLLOCK ---
   const calculateBodyComposition = () => {
       if (!weight || weight <= 0) return alert("Insira o peso atual do aluno.");
       if (!age || age <= 0) return alert("Insira a idade.");
@@ -162,22 +157,26 @@ export default function PollockPage() {
   return (
     <div className="min-h-screen bg-black text-white pb-20 relative">
         
-        {/* CSS DE IMPRESSÃO */}
+        {/* CSS DE IMPRESSÃO CEGO E ESTRUTURADO */}
         <style jsx global>{`
             @media print {
                 body * { visibility: hidden; }
-                body { background-color: white !important; color: black !important; }
+                body { background-color: white !important; color: black !important; margin: 0; padding: 0; }
                 #print-area, #print-area * { visibility: visible; }
-                #print-area { position: absolute; left: 0; top: 0; width: 100%; background-color: white !important; display: block !important; padding: 20mm; }
-                .print-bg-brand { background-color: #84cc16 !important; -webkit-print-color-adjust: exact; }
-                .print-bg-zinc { background-color: #f4f4f5 !important; -webkit-print-color-adjust: exact; }
+                #print-area { position: absolute; left: 0; top: 0; width: 100%; background-color: white !important; display: block !important; }
+                
+                /* Força a impressão das cores de fundo */
+                .print-bg-brand { background-color: #84cc16 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                .print-bg-zinc { background-color: #e4e4e7 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                 .print-text-black { color: black !important; }
-                .page-break { page-break-after: always; break-after: page; }
+                
+                /* Quebras de página seguras */
+                .page-break { page-break-before: always; break-before: page; }
+                .avoid-break { page-break-inside: avoid; break-inside: avoid; }
             }
             #print-area { display: none; }
         `}</style>
 
-        {/* HEADER RESPONSIVO */}
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 border-b border-zinc-900 sticky top-0 bg-black/90 backdrop-blur z-40 print:hidden flex flex-col md:flex-row justify-between md:items-center gap-4">
             <Link href={`/dashboard/alunos/${studentId}`} className="text-zinc-400 hover:text-brand flex items-center gap-2 font-bold uppercase text-xs">
                 <ArrowLeft size={16} /> Voltar
@@ -203,7 +202,6 @@ export default function PollockPage() {
                 <SaveAll size={14}/> <span>Auto-Save Ativo: Preencha sem medo de perder os dados.</span>
             </div>
 
-            {/* DADOS BÁSICOS */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="col-span-2">
                     <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">Aluno</p>
@@ -219,9 +217,7 @@ export default function PollockPage() {
                 </div>
             </div>
 
-            {/* DOBRAS E CIRCUNFERÊNCIAS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* DOBRAS */}
                 <div className="bg-zinc-900 border border-brand/20 rounded-2xl p-6 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-brand"></div>
                     <h2 className="text-sm font-black text-white uppercase tracking-widest mb-6">Dobras Cutâneas (mm)</h2>
@@ -235,7 +231,6 @@ export default function PollockPage() {
                     </div>
                 </div>
 
-                {/* CIRCUNFERÊNCIAS */}
                 <div className="bg-zinc-900 border border-blue-500/20 rounded-2xl p-6 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
                     <h2 className="text-sm font-black text-white uppercase tracking-widest mb-6">Perímetros (cm)</h2>
@@ -250,7 +245,6 @@ export default function PollockPage() {
                 </div>
             </div>
 
-            {/* AÇÕES */}
             <div className="flex justify-between items-center bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
                 <button onClick={clearDraft} className="text-xs text-red-500 hover:text-red-400 uppercase font-bold tracking-widest px-4 py-2">
                     Limpar Dados
@@ -260,7 +254,6 @@ export default function PollockPage() {
                 </button>
             </div>
 
-            {/* PAINEL DE FOTOS */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
                 <h2 className="text-sm font-black text-white uppercase tracking-widest mb-4">Registro Fotográfico</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -280,7 +273,6 @@ export default function PollockPage() {
                 </div>
             </div>
 
-            {/* RESULTADOS (Composição) */}
             {results && (
                 <div className="bg-black border border-lime-500/30 rounded-3xl p-6 md:p-10 shadow-[0_0_40px_rgba(132,204,22,0.1)] relative overflow-hidden animate-in slide-in-from-bottom-10">
                     <div className="flex flex-col md:flex-row justify-between md:items-start gap-4 mb-8">
@@ -308,11 +300,12 @@ export default function PollockPage() {
             )}
         </div>
 
-        {/* --- ÁREA DE IMPRESSÃO (PDF) --- */}
+        {/* --- ÁREA EXCLUSIVA DE IMPRESSÃO (PDF) --- */}
         {results && (
-            <div id="print-area" className="bg-white text-black p-8 font-sans">
+            <div id="print-area" className="bg-white text-black font-sans">
+                
                 {/* PÁGINA 1: DADOS E TABELAS */}
-                <div className="page-break">
+                <div className="p-8">
                     <div className="border-b-2 border-black pb-4 mb-8 flex justify-between items-end">
                         <div>
                             <h1 className="text-3xl font-black uppercase tracking-tighter">Avaliação Física Completa</h1>
@@ -323,6 +316,19 @@ export default function PollockPage() {
                             <p className="text-lg font-black">{student.full_name}</p>
                             <p className="text-[10px] font-bold text-zinc-500 mt-1">Avaliador: Paulo Adriano TEAM</p>
                             <p className="text-[10px] font-bold text-zinc-500">{new Date().toLocaleDateString('pt-BR')}</p>
+                        </div>
+                    </div>
+
+                    {/* Gráfico Visual Adicionado à Impressão */}
+                    <div className="mb-8 avoid-break">
+                        <h3 className="text-[10px] font-black uppercase text-zinc-500 tracking-widest mb-2">Gráfico de Composição Corporal</h3>
+                        <div className="h-8 w-full print-bg-zinc rounded-full overflow-hidden flex relative border border-zinc-300">
+                            <div style={{ width: `${100 - results.bf}%` }} className="h-full flex items-center px-4 border-r border-zinc-400">
+                                <span className="text-[10px] font-black print-text-black">Massa Magra ({results.leanMass.toFixed(1)}kg)</span>
+                            </div>
+                            <div style={{ width: `${results.bf}%` }} className="h-full print-bg-brand flex items-center px-4 justify-end">
+                                <span className="text-[10px] font-black print-text-black">Gordura ({results.fatMass.toFixed(1)}kg)</span>
+                            </div>
                         </div>
                     </div>
 
@@ -351,7 +357,7 @@ export default function PollockPage() {
                             {FOLD_KEYS.map(k => (
                                 <div key={k} className="flex justify-between border-b border-zinc-200 py-1">
                                     <span className="text-[10px] uppercase font-bold text-zinc-600">{formatName(k)}</span>
-                                    <span className="text-xs font-black">{folds[k as keyof Folds] || '--'}</span>
+                                    <span className="text-xs font-black print-text-black">{folds[k as keyof Folds] || '--'}</span>
                                 </div>
                             ))}
                         </div>
@@ -360,30 +366,31 @@ export default function PollockPage() {
                             {CIRC_KEYS.map(k => (
                                 <div key={k} className="flex justify-between border-b border-zinc-200 py-1">
                                     <span className="text-[10px] uppercase font-bold text-zinc-600">{formatName(k)}</span>
-                                    <span className="text-xs font-black">{circs[k as keyof Circs] || '--'}</span>
+                                    <span className="text-xs font-black print-text-black">{circs[k as keyof Circs] || '--'}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
 
-                {/* PÁGINA 2: FOTOS (Se houver) */}
+                {/* PÁGINA 2: FOTOS (Com quebra forçada) */}
                 {(photos.frente || photos.perfil || photos.costas) && (
-                    <div className="page-break">
+                    <div className="p-8 page-break">
                         <h3 className="text-2xl font-black uppercase border-b-2 border-black pb-2 mb-6 tracking-tighter">Registro Fotográfico</h3>
                         <div className="grid grid-cols-3 gap-6">
                             {['frente', 'perfil', 'costas'].map(pose => (
                                 photos[pose as keyof typeof photos] ? (
                                     <div key={pose} className="flex flex-col items-center">
-                                        <img src={photos[pose as keyof typeof photos]!} className="w-full object-contain rounded-lg border border-zinc-300 shadow-sm" style={{ maxHeight: '60vh' }} />
+                                        {/* Imagem com tamanho máximo para nunca quebrar a página */}
+                                        <img src={photos[pose as keyof typeof photos]!} className="w-full max-h-[50vh] object-contain rounded-lg border border-zinc-300 shadow-sm" />
                                         <p className="text-xs uppercase font-black text-zinc-600 mt-3">{pose}</p>
                                     </div>
                                 ) : null
                             ))}
                         </div>
-                        <div className="mt-auto pt-10 border-t border-zinc-300 flex justify-between items-end opacity-60">
-                            <div><div className="h-px bg-black w-48 mb-2"></div><p className="text-[10px] font-bold uppercase tracking-widest">Avaliador Responsável</p></div>
-                            <p className="text-[9px] font-black italic">COACHPRO SYSTEM</p>
+                        <div className="mt-20 pt-8 border-t border-zinc-300 flex justify-between items-end opacity-60">
+                            <div><div className="h-px bg-black w-48 mb-2"></div><p className="text-[10px] font-bold uppercase tracking-widest print-text-black">Avaliador Responsável</p></div>
+                            <p className="text-[9px] font-black italic print-text-black">COACHPRO SYSTEM</p>
                         </div>
                     </div>
                 )}

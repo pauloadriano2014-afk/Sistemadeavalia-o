@@ -204,29 +204,45 @@ export default function PollockPage() {
   return (
     <div className="min-h-screen bg-black text-white pb-20 relative">
         
-        {/* CSS DE IMPRESSÃO CEGO E ESTRUTURADO (COM HACK PARA IOS) */}
+                {/* CSS DE IMPRESSÃO BLINDADO (FIM DA TELA BRANCA NO IOS) */}
         <style jsx global>{`
             @media print {
-                body * { visibility: hidden; }
-                body { background-color: white !important; color: black !important; margin: 0; padding: 0; }
-                #print-area, #print-area * { visibility: visible; }
-                #print-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+                /* 1. REMOVIDO o visibility:hidden e position:absolute que apagavam o PDF no iPhone */
+                @page { margin: 5mm 10mm; }
+                body { 
+                    background-color: white !important; 
+                    -webkit-print-color-adjust: exact !important; 
+                    print-color-adjust: exact !important; 
+                }
                 
-                /* Hack para forçar cores de fundo no Safari Mobile (iOS) */
-                .print-bg-brand { box-shadow: inset 0 0 0 1000px var(--brand) !important; color: black !important; }
-                .print-bg-zinc { box-shadow: inset 0 0 0 1000px #f4f4f5 !important; color: black !important; border: 1px solid #e4e4e7 !important; }
+                /* 2. Cores forçadas pro iOS não deixar tudo branco/cinza */
+                .print-bg-brand { 
+                    background-color: var(--brand) !important;
+                    box-shadow: inset 0 0 0 1000px var(--brand) !important; 
+                }
+                .print-bg-zinc { 
+                    background-color: #f4f4f5 !important;
+                    box-shadow: inset 0 0 0 1000px #f4f4f5 !important; 
+                }
                 .print-text-black { color: black !important; }
                 
-                /* Quebras de página seguras e blindadas */
-                .page-break { page-break-before: always; break-before: page; margin-top: 10mm; }
-                .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; display: inline-block; width: 100%; }
+                /* 3. Quebras de página seguras e anti-corte de texto */
+                .page-break { break-before: page; page-break-before: always; padding-top: 10mm; }
+                /* A primeira página não deve ter quebra antes dela, senão gera uma folha extra em branco */
+                .page-break:first-child { break-before: auto; page-break-before: auto; padding-top: 0; }
                 
-                /* Blindagem das Fotos */
-                .print-photo-container { display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-inside: avoid; break-inside: avoid; }
-                .print-photo { max-height: 40vh !important; width: auto !important; object-fit: contain !important; border-radius: 8px !important; }
+                /* Impede que blocos de texto ou grids sejam fatiados no meio */
+                .avoid-break { break-inside: avoid !important; page-break-inside: avoid !important; display: block; width: 100%; }
+                
+                /* 4. Limita fotos pra não vazarem de página e cortarem a cabeça/pé do aluno */
+                .print-photo-container { break-inside: avoid !important; page-break-inside: avoid !important; text-align: center; margin-bottom: 10mm;}
+                .print-photo { max-height: 35vh !important; width: auto !important; object-fit: contain !important; border-radius: 8px !important; margin: 0 auto; }
             }
+            
+            /* Mantém a área de impressão invisível enquanto navega no site normal */
             #print-area { display: none; }
         `}</style>
+
 
         {/* --- INTERFACE DO APLICATIVO (ESCONDIDA NA IMPRESSÃO) --- */}
         <div className="print:hidden">

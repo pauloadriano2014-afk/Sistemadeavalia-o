@@ -383,20 +383,19 @@ export default function PollockPage() {
                         </div>
                     </div>
 
-                    {/* Gráfico Visual Dinâmico Forçado */}
+                                        {/* Gráfico Visual Dinâmico Forçado (Hack Box-Shadow) */}
                     <div className="mb-8 avoid-break">
                         <div className="flex justify-between mb-2">
                             <span className="text-[10px] uppercase font-black text-zinc-600">Massa Magra ({results.leanMass.toFixed(1)}kg)</span>
                             <span className="text-[10px] uppercase font-black" style={{ color: brandColor }}>Gordura ({results.fatMass.toFixed(1)}kg)</span>
                         </div>
-                        <div className="h-5 w-full rounded-full overflow-hidden relative border border-zinc-300" style={{ backgroundColor: '#f4f4f5' }}>
-                            {/* O SVG injeta a cor exata do Tema para o Safari imprimir */}
-                            <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                                <rect x="0" y="0" width={`${100 - results.bf}%`} height="100%" fill="#f4f4f5" />
-                                <rect x={`${100 - results.bf}%`} y="0" width={`${results.bf}%`} height="100%" fill={brandColor} />
-                            </svg>
+                        {/* Barra construída com Flexbox e Box-Shadow para burlar o iOS */}
+                        <div className="flex h-4 w-full rounded-full overflow-hidden border border-zinc-300">
+                            <div style={{ width: `${100 - results.bf}%`, boxShadow: 'inset 0 0 0 1000px #f4f4f5' }} className="h-full"></div>
+                            <div style={{ width: `${results.bf}%`, boxShadow: `inset 0 0 0 1000px ${brandColor}` }} className="h-full"></div>
                         </div>
                     </div>
+
 
                     {/* Caixinhas Resumo com HACK de Box-Shadow (Força o iOS a pintar o fundo) */}
                     <div className="grid grid-cols-4 gap-4 mb-10">

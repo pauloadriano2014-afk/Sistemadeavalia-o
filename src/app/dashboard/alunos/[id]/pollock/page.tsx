@@ -157,7 +157,7 @@ export default function PollockPage() {
   return (
     <div className="min-h-screen bg-black text-white pb-20 relative">
         
-        {/* CSS DE IMPRESSÃO CEGO E ESTRUTURADO */}
+        {/* CSS DE IMPRESSÃO CEGO E ESTRUTURADO (COM HACK PARA IOS) */}
         <style jsx global>{`
             @media print {
                 body * { visibility: hidden; }
@@ -165,14 +165,18 @@ export default function PollockPage() {
                 #print-area, #print-area * { visibility: visible; }
                 #print-area { position: absolute; left: 0; top: 0; width: 100%; background-color: white !important; display: block !important; }
                 
-                /* Força a impressão das cores de fundo */
-                .print-bg-brand { background-color: #84cc16 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                .print-bg-zinc { background-color: #e4e4e7 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                /* Hack para forçar cores de fundo no Safari Mobile (iOS) */
+                .print-bg-brand { box-shadow: inset 0 0 0 1000px #84cc16 !important; color: black !important; border: 2px solid #84cc16 !important; }
+                .print-bg-zinc { box-shadow: inset 0 0 0 1000px #f4f4f5 !important; color: black !important; border: 2px solid #d4d4d8 !important; }
                 .print-text-black { color: black !important; }
                 
-                /* Quebras de página seguras */
-                .page-break { page-break-before: always; break-before: page; }
+                /* Quebras de página seguras e blindadas */
+                .page-break { page-break-before: always; break-before: page; margin-top: 10mm; }
                 .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+                
+                /* Blindagem das Fotos */
+                .print-photo-container { display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-inside: avoid; break-inside: avoid; }
+                .print-photo { max-height: 40vh !important; width: auto !important; object-fit: contain !important; border: 1px solid #d4d4d8 !important; border-radius: 8px !important; }
             }
             #print-area { display: none; }
         `}</style>
@@ -278,7 +282,7 @@ export default function PollockPage() {
                     <div className="flex flex-col md:flex-row justify-between md:items-start gap-4 mb-8">
                         <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Composição Corporal</h2>
                         <button onClick={() => window.print()} className="w-full md:w-auto bg-brand text-black px-6 py-3 rounded-xl hover:scale-105 transition-transform shadow-lg shadow-brand/20 font-black uppercase text-xs flex justify-center gap-2 items-center">
-                            <Printer size={16} /> Imprimir Laudo
+                            <Printer size={16} /> Imprimir Laudo Completo
                         </button>
                     </div>
 
@@ -302,10 +306,10 @@ export default function PollockPage() {
 
         {/* --- ÁREA EXCLUSIVA DE IMPRESSÃO (PDF) --- */}
         {results && (
-            <div id="print-area" className="bg-white text-black font-sans">
+            <div id="print-area" className="bg-white text-black font-sans p-8">
                 
                 {/* PÁGINA 1: DADOS E TABELAS */}
-                <div className="p-8">
+                <div className="avoid-break mb-10">
                     <div className="border-b-2 border-black pb-4 mb-8 flex justify-between items-end">
                         <div>
                             <h1 className="text-3xl font-black uppercase tracking-tighter">Avaliação Física Completa</h1>
@@ -319,7 +323,6 @@ export default function PollockPage() {
                         </div>
                     </div>
 
-                    {/* Gráfico Visual Adicionado à Impressão */}
                     <div className="mb-8 avoid-break">
                         <h3 className="text-[10px] font-black uppercase text-zinc-500 tracking-widest mb-2">Gráfico de Composição Corporal</h3>
                         <div className="h-8 w-full print-bg-zinc rounded-full overflow-hidden flex relative border border-zinc-300">
@@ -333,25 +336,25 @@ export default function PollockPage() {
                     </div>
 
                     <div className="grid grid-cols-4 gap-4 mb-10">
-                        <div className="print-bg-zinc p-3 rounded-lg border border-zinc-300">
-                            <p className="text-[9px] uppercase font-black text-zinc-500">Peso Total</p>
+                        <div className="print-bg-zinc p-3 rounded-lg border border-zinc-300 text-center">
+                            <p className="text-[9px] uppercase font-black text-zinc-600">Peso Total</p>
                             <p className="text-xl font-black print-text-black">{weight} kg</p>
                         </div>
-                        <div className="print-bg-brand p-3 rounded-lg border border-zinc-300">
-                            <p className="text-[9px] uppercase font-black text-black">Gordura (BF)</p>
+                        <div className="print-bg-brand p-3 rounded-lg border border-zinc-300 text-center">
+                            <p className="text-[9px] uppercase font-black print-text-black">Gordura (BF)</p>
                             <p className="text-xl font-black print-text-black">{results.bf.toFixed(1)} %</p>
                         </div>
-                        <div className="print-bg-zinc p-3 rounded-lg border border-zinc-300">
-                            <p className="text-[9px] uppercase font-black text-zinc-500">Massa Magra</p>
+                        <div className="print-bg-zinc p-3 rounded-lg border border-zinc-300 text-center">
+                            <p className="text-[9px] uppercase font-black text-zinc-600">Massa Magra</p>
                             <p className="text-xl font-black print-text-black">{results.leanMass.toFixed(1)} kg</p>
                         </div>
-                        <div className="print-bg-zinc p-3 rounded-lg border border-zinc-300">
-                            <p className="text-[9px] uppercase font-black text-zinc-500">Massa Gorda</p>
+                        <div className="print-bg-zinc p-3 rounded-lg border border-zinc-300 text-center">
+                            <p className="text-[9px] uppercase font-black text-zinc-600">Massa Gorda</p>
                             <p className="text-xl font-black print-text-black">{results.fatMass.toFixed(1)} kg</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-8 mb-8">
+                    <div className="grid grid-cols-2 gap-10 mb-8">
                         <div>
                             <h3 className="text-xs font-black uppercase border-b border-black pb-1 mb-3">Dobras Cutâneas (mm)</h3>
                             {FOLD_KEYS.map(k => (
@@ -373,24 +376,57 @@ export default function PollockPage() {
                     </div>
                 </div>
 
-                {/* PÁGINA 2: FOTOS (Com quebra forçada) */}
+                {/* PÁGINA 2: GUIA DE DEFINIÇÃO (Nova Solicitação) */}
+                <div className="page-break">
+                    <h3 className="text-2xl font-black uppercase border-b-2 border-black pb-2 mb-6 tracking-tighter">Guia de Hipertrofia e Definição</h3>
+                    
+                    <div className="print-bg-zinc border border-black p-4 rounded-xl mb-6">
+                        <p className="text-sm font-bold uppercase print-text-black mb-2 flex items-center gap-2">⚠️ Atenção à Regra de Ouro</p>
+                        <p className="text-sm print-text-black leading-relaxed text-justify font-medium">
+                            Exercício direcionado (ex: abdominal) gera <b>hipertrofia</b> do músculo local, mas <b>NÃO</b> queima a gordura daquela região específica. 
+                            Para o músculo ficar visível ("definido"), é obrigatório reduzir a camada de gordura (dobra cutânea) através de <b>Déficit Calórico, Dieta alinhada e Cardio em dia</b>.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h4 className="text-xs font-black uppercase border-b border-zinc-300 pb-1 mb-3 text-zinc-600">Alvo de Definição Visível</h4>
+                            <ul className="text-xs space-y-2 font-medium print-text-black">
+                                <li><b>Homens:</b> Dobras geralmente abaixo de <b>8 a 10mm</b>.</li>
+                                <li><b>Mulheres:</b> Dobras geralmente abaixo de <b>12 a 15mm</b>.</li>
+                                <li className="text-[10px] text-zinc-500 italic">*Pode variar de acordo com a genética e hidratação.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="text-xs font-black uppercase border-b border-zinc-300 pb-1 mb-3 text-zinc-600">Mapeamento de Regiões</h4>
+                            <ul className="text-xs space-y-2 font-medium print-text-black">
+                                <li><b>Peitoral:</b> Supinos, Crucifixos, Flexões.</li>
+                                <li><b>Tríceps (Tchauzinho):</b> Tríceps Testa, Polia, Francesa.</li>
+                                <li><b>Subescapular (Costas):</b> Puxadas Altas, Remadas.</li>
+                                <li><b>Abdômen e Suprailíaca:</b> Pranchas, Crunches, Elevações.</li>
+                                <li><b>Coxa (Quadríceps):</b> Agachamentos, Leg Press, Extensora.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {/* PÁGINA 3: FOTOS (Blindada contra cortes) */}
                 {(photos.frente || photos.perfil || photos.costas) && (
-                    <div className="p-8 page-break">
-                        <h3 className="text-2xl font-black uppercase border-b-2 border-black pb-2 mb-6 tracking-tighter">Registro Fotográfico</h3>
-                        <div className="grid grid-cols-3 gap-6">
+                    <div className="page-break">
+                        <h3 className="text-2xl font-black uppercase border-b-2 border-black pb-2 mb-8 tracking-tighter">Registro Fotográfico</h3>
+                        <div className="grid grid-cols-3 gap-4">
                             {['frente', 'perfil', 'costas'].map(pose => (
                                 photos[pose as keyof typeof photos] ? (
-                                    <div key={pose} className="flex flex-col items-center">
-                                        {/* Imagem com tamanho máximo para nunca quebrar a página */}
-                                        <img src={photos[pose as keyof typeof photos]!} className="w-full max-h-[50vh] object-contain rounded-lg border border-zinc-300 shadow-sm" />
+                                    <div key={pose} className="print-photo-container">
+                                        <img src={photos[pose as keyof typeof photos]!} className="print-photo" />
                                         <p className="text-xs uppercase font-black text-zinc-600 mt-3">{pose}</p>
                                     </div>
                                 ) : null
                             ))}
                         </div>
-                        <div className="mt-20 pt-8 border-t border-zinc-300 flex justify-between items-end opacity-60">
-                            <div><div className="h-px bg-black w-48 mb-2"></div><p className="text-[10px] font-bold uppercase tracking-widest print-text-black">Avaliador Responsável</p></div>
-                            <p className="text-[9px] font-black italic print-text-black">COACHPRO SYSTEM</p>
+                        <div className="mt-20 pt-8 border-t-2 border-black flex justify-between items-end opacity-80 avoid-break">
+                            <div><div className="h-px bg-black w-48 mb-2"></div><p className="text-xs font-bold uppercase tracking-widest print-text-black">Avaliador Responsável</p></div>
+                            <p className="text-[10px] font-black italic print-text-black">GERADO VIA COACHPRO SYSTEM</p>
                         </div>
                     </div>
                 )}

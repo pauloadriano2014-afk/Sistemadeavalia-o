@@ -33,8 +33,10 @@ export default function PollockPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const [results, setResults] = useState<{ bf: number, fatMass: number, leanMass: number } | null>(null);
 
+  // --- AUTO-SAVE OFFLINE ---
   useEffect(() => {
     const savedData = localStorage.getItem(`pollock_draft_${studentId}`);
     if (savedData) {
@@ -59,24 +61,69 @@ export default function PollockPage() {
       localStorage.setItem(`pollock_draft_${studentId}`, JSON.stringify({ folds, circs, weight, age }));
   }, [folds, circs, weight, age, studentId]);
 
+  // --- MICROFONE INTELIGENTE (CORTA SOZINHO NO SILÊNCIO) ---
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
+
       mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
         processAudio(audioBlob);
         stream.getTracks().forEach(track => track.stop()); 
+        if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
       };
+
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = audioCtx;
+      const analyser = audioCtx.createAnalyser();
+      const microphone = audioCtx.createMediaStreamSource(stream);
+      microphone.connect(analyser);
+      analyser.fftSize = 256;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      let lastSoundTime = Date.now();
+      let hasSpoken = false;
+
+      const detectSilence = () => {
+          if (mediaRecorder.state !== 'recording') return;
+          
+          analyser.getByteFrequencyData(dataArray);
+          const volume = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
+
+          if (volume > 12) { 
+              lastSoundTime = Date.now();
+              hasSpoken = true;
+          } else { 
+              const silenceDuration = Date.now() - lastSoundTime;
+              if ((hasSpoken && silenceDuration > 2000) || (!hasSpoken && silenceDuration > 6000)) {
+                  stopRecording();
+                  return;
+              }
+          }
+          requestAnimationFrame(detectSilence);
+      };
+
       mediaRecorder.start();
       setIsRecording(true);
+      detectSilence();
+
     } catch (err) { alert("Permita o uso do microfone no navegador."); }
   };
 
-  const stopRecording = () => { if (mediaRecorderRef.current && isRecording) { mediaRecorderRef.current.stop(); setIsRecording(false); } };
+  const stopRecording = () => { 
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') { 
+          mediaRecorderRef.current.stop(); 
+          setIsRecording(false); 
+      } 
+  };
 
   const processAudio = async (audioBlob: Blob) => {
       setIsProcessing(true);
@@ -155,16 +202,30 @@ export default function PollockPage() {
   if (!student) return <div className="min-h-screen bg-black flex items-center justify-center text-brand font-bold uppercase tracking-widest">Carregando...</div>;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-20">
+    <div className="min-h-screen bg-black text-white pb-20 relative">
         
-        {/* CSS DE IMPRESSÃO BLINDADO */}
+        {/* CSS DE IMPRESSÃO CEGO E ESTRUTURADO (COM HACK PARA IOS) */}
         <style jsx global>{`
             @media print {
-                @page { margin: 10mm; }
-                body { background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                .page-break { break-after: page; page-break-after: always; padding-bottom: 20mm; }
-                .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+                body * { visibility: hidden; }
+                body { background-color: white !important; color: black !important; margin: 0; padding: 0; }
+                #print-area, #print-area * { visibility: visible; }
+                #print-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+                
+                /* Hack para forçar cores de fundo no Safari Mobile (iOS) */
+                .print-bg-brand { box-shadow: inset 0 0 0 1000px var(--brand) !important; color: black !important; }
+                .print-bg-zinc { box-shadow: inset 0 0 0 1000px #f4f4f5 !important; color: black !important; border: 1px solid #e4e4e7 !important; }
+                .print-text-black { color: black !important; }
+                
+                /* Quebras de página seguras e blindadas */
+                .page-break { page-break-before: always; break-before: page; margin-top: 10mm; }
+                .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; display: inline-block; width: 100%; }
+                
+                /* Blindagem das Fotos */
+                .print-photo-container { display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-inside: avoid; break-inside: avoid; }
+                .print-photo { max-height: 40vh !important; width: auto !important; object-fit: contain !important; border-radius: 8px !important; }
             }
+            #print-area { display: none; }
         `}</style>
 
         {/* --- INTERFACE DO APLICATIVO (ESCONDIDA NA IMPRESSÃO) --- */}
@@ -183,7 +244,7 @@ export default function PollockPage() {
                             isRecording ? "bg-red-500 text-white animate-pulse shadow-red-500/20" : "bg-brand text-black shadow-brand/20"
                         }`}
                     >
-                        {isProcessing ? <Loader2 className="animate-spin" size={16}/> : isRecording ? <><Square size={14}/> Parar</> : <><Mic size={14}/> Gravar Medidas</>}
+                        {isProcessing ? <Loader2 className="animate-spin" size={16}/> : isRecording ? <><Square size={14}/> Ouvindo...</> : <><Mic size={14}/> Gravar Medidas</>}
                     </button>
                 </div>
             </div>
@@ -295,75 +356,74 @@ export default function PollockPage() {
 
         {/* --- ÁREA EXCLUSIVA DE IMPRESSÃO (PDF) --- */}
         {results && (
-            <div className="hidden print:block w-full bg-white text-black font-sans">
+            <div className="hidden print:block w-full bg-white text-black font-sans p-8">
                 
                 {/* PÁGINA 1: DADOS E TABELAS */}
-                <div className="page-break">
-                    <div className="border-b-2 border-brand pb-4 mb-8 flex justify-between items-end">
+                <div className="avoid-break mb-10">
+                    <div className="border-b-2 pb-4 mb-8 flex justify-between items-end" style={{ borderColor: 'var(--brand)' }}>
                         <div>
-                            <h1 className="text-4xl font-black text-brand uppercase tracking-tighter">Avaliação Física</h1>
+                            <h1 className="text-4xl font-black uppercase tracking-tighter" style={{ color: 'var(--brand)' }}>Avaliação Física</h1>
                             <p className="text-xs font-bold uppercase text-zinc-600 mt-1">Protocolo: Jackson & Pollock (7 Dobras)</p>
                         </div>
                         <div className="text-right">
                             <p className="text-xs font-bold uppercase text-zinc-500">Atleta</p>
-                            <p className="text-lg font-black text-black">{student.full_name}</p>
+                            <p className="text-lg font-black print-text-black">{student.full_name}</p>
                             <p className="text-[10px] font-bold text-zinc-500 mt-1">Avaliador: Paulo Adriano TEAM</p>
                             <p className="text-[10px] font-bold text-zinc-500">{new Date().toLocaleDateString('pt-BR')}</p>
                         </div>
                     </div>
 
-                    {/* Gráfico Visual Blindado com SVG e Cores do Tema */}
+                    {/* Gráfico Visual Dinâmico (Vetor inquebrável) */}
                     <div className="mb-8 avoid-break">
                         <div className="flex justify-between mb-2">
                             <span className="text-[10px] uppercase font-black text-zinc-600">Massa Magra ({results.leanMass.toFixed(1)}kg)</span>
-                            <span className="text-[10px] uppercase font-black text-brand">Gordura ({results.fatMass.toFixed(1)}kg)</span>
+                            <span className="text-[10px] uppercase font-black" style={{ color: 'var(--brand)' }}>Gordura ({results.fatMass.toFixed(1)}kg)</span>
                         </div>
-                        <div className="h-5 w-full rounded-full overflow-hidden border border-zinc-300 relative">
-                            {/* O SVG garante que as cores sejam impressas independentemente do bloqueio do iOS */}
+                        <div className="h-5 w-full rounded-full overflow-hidden relative bg-zinc-100 border border-zinc-200">
+                            {/* SVG obriga o Safari a imprimir as cores do Tema escolhido */}
                             <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                                <rect x="0" y="0" width={`${100 - results.bf}%`} height="100%" fill="#e4e4e7" />
-                                <rect x={`${100 - results.bf}%`} y="0" width={`${results.bf}%`} height="100%" fill="currentColor" className="text-brand" />
+                                <rect x="0" y="0" width={`${100 - results.bf}%`} height="100%" fill="#f4f4f5" />
+                                <rect x={`${100 - results.bf}%`} y="0" width={`${results.bf}%`} height="100%" fill="var(--brand)" />
                             </svg>
                         </div>
                     </div>
 
+                    {/* Caixinhas Resumo Clean */}
                     <div className="grid grid-cols-4 gap-4 mb-10">
-                        <div className="p-3 rounded-xl border-2 border-zinc-300 text-center">
+                        <div className="print-bg-zinc p-3 rounded-xl border border-zinc-200 text-center">
                             <p className="text-[9px] uppercase font-black text-zinc-500">Peso Total</p>
-                            <p className="text-xl font-black text-black">{weight} kg</p>
+                            <p className="text-xl font-black print-text-black">{weight} kg</p>
                         </div>
-                        {/* Caixinha do BF usando as cores do tema ativado */}
-                        <div className="p-3 rounded-xl border-2 border-brand text-center relative overflow-hidden">
-                            <div className="absolute inset-0 bg-brand opacity-10"></div>
-                            <p className="text-[9px] uppercase font-black text-brand relative z-10">Gordura (BF)</p>
-                            <p className="text-xl font-black text-black relative z-10">{results.bf.toFixed(1)} %</p>
+                        <div className="print-bg-brand p-3 rounded-xl text-center">
+                            <p className="text-[9px] uppercase font-black print-text-black">Gordura (BF)</p>
+                            <p className="text-xl font-black print-text-black">{results.bf.toFixed(1)} %</p>
                         </div>
-                        <div className="p-3 rounded-xl border-2 border-zinc-300 text-center">
+                        <div className="print-bg-zinc p-3 rounded-xl border border-zinc-200 text-center">
                             <p className="text-[9px] uppercase font-black text-zinc-500">Massa Magra</p>
-                            <p className="text-xl font-black text-black">{results.leanMass.toFixed(1)} kg</p>
+                            <p className="text-xl font-black print-text-black">{results.leanMass.toFixed(1)} kg</p>
                         </div>
-                        <div className="p-3 rounded-xl border-2 border-zinc-300 text-center">
+                        <div className="print-bg-zinc p-3 rounded-xl border border-zinc-200 text-center">
                             <p className="text-[9px] uppercase font-black text-zinc-500">Massa Gorda</p>
-                            <p className="text-xl font-black text-black">{results.fatMass.toFixed(1)} kg</p>
+                            <p className="text-xl font-black print-text-black">{results.fatMass.toFixed(1)} kg</p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-10 mb-8">
                         <div>
-                            <h3 className="text-xs font-black text-brand uppercase border-b-2 border-zinc-200 pb-2 mb-4 tracking-widest">Dobras Cutâneas (mm)</h3>
+                            <h3 className="text-xs font-black uppercase border-b-2 pb-2 mb-4 tracking-widest" style={{ color: 'var(--brand)', borderColor: '#e4e4e7' }}>Dobras Cutâneas (mm)</h3>
                             {FOLD_KEYS.map(k => (
                                 <div key={k} className="flex justify-between border-b border-zinc-100 py-1.5">
                                     <span className="text-[10px] uppercase font-bold text-zinc-600">{formatName(k)}</span>
-                                    <span className="text-xs font-black text-black">{folds[k as keyof Folds] || '--'}</span>
+                                    <span className="text-xs font-black print-text-black">{folds[k as keyof Folds] || '--'}</span>
                                 </div>
                             ))}
                         </div>
                         <div>
-                            <h3 className="text-xs font-black text-brand uppercase border-b-2 border-zinc-200 pb-2 mb-4 tracking-widest">Perímetros (cm)</h3>
+                            <h3 className="text-xs font-black uppercase border-b-2 pb-2 mb-4 tracking-widest" style={{ color: 'var(--brand)', borderColor: '#e4e4e7' }}>Perímetros (cm)</h3>
                             {CIRC_KEYS.map(k => (
                                 <div key={k} className="flex justify-between border-b border-zinc-100 py-1.5">
                                     <span className="text-[10px] uppercase font-bold text-zinc-600">{formatName(k)}</span>
-                                    <span className="text-xs font-black text-black">{circs[k as keyof Circs] || '--'}</span>
+                                    <span className="text-xs font-black print-text-black">{circs[k as keyof Circs] || '--'}</span>
                                 </div>
                             ))}
                         </div>
@@ -371,29 +431,31 @@ export default function PollockPage() {
                 </div>
 
                 {/* PÁGINA 2: GUIA DE DEFINIÇÃO E HIPERTROFIA */}
-                <div className="page-break">
-                    <h3 className="text-3xl font-black text-brand uppercase border-b-2 border-brand pb-2 mb-8 tracking-tighter">Guia de Hipertrofia e Definição</h3>
+                <div className="page-break avoid-break">
+                    <h3 className="text-3xl font-black uppercase border-b-2 pb-2 mb-8 tracking-tighter" style={{ color: 'var(--brand)', borderColor: 'var(--brand)' }}>
+                        Guia de Hipertrofia e Definição
+                    </h3>
                     
-                    <div className="border-2 border-zinc-300 p-6 rounded-2xl mb-8 bg-zinc-50">
-                        <p className="text-lg font-black uppercase text-brand mb-3 flex items-center gap-2">⚠️ Atenção à Regra de Ouro</p>
-                        <p className="text-base text-black leading-relaxed text-justify font-medium">
+                    <div className="border border-zinc-300 p-6 rounded-2xl mb-8 bg-zinc-50">
+                        <p className="text-lg font-black uppercase mb-3 flex items-center gap-2" style={{ color: 'var(--brand)' }}>⚠️ Atenção à Regra de Ouro</p>
+                        <p className="text-base print-text-black leading-relaxed text-justify font-medium">
                             Exercício direcionado (ex: abdominal) gera <b>hipertrofia</b> do músculo local, mas <b>NÃO</b> queima a gordura daquela região específica. 
                             Para o músculo ficar visível ("definido"), é obrigatório reduzir a camada de gordura (dobra cutânea) através de <b>Déficit Calórico, Dieta alinhada e Cardio em dia</b>.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-8 mb-6">
-                        <div>
+                        <div className="avoid-break">
                             <h4 className="text-sm font-black uppercase border-b-2 border-zinc-200 pb-2 mb-4 text-zinc-500 tracking-widest">Alvo de Definição Visível</h4>
-                            <ul className="text-sm space-y-4 font-medium text-black">
-                                <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-brand"></div> <b>Homens:</b> Dobras abaixo de 8 a 10mm.</li>
-                                <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-brand"></div> <b>Mulheres:</b> Dobras abaixo de 12 a 15mm.</li>
+                            <ul className="text-sm space-y-4 font-medium print-text-black">
+                                <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--brand)' }}></div> <b>Homens:</b> Dobras abaixo de 8 a 10mm.</li>
+                                <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--brand)' }}></div> <b>Mulheres:</b> Dobras abaixo de 12 a 15mm.</li>
                                 <li className="text-[10px] text-zinc-500 italic mt-2">* Variações ocorrem por genética e hidratação.</li>
                             </ul>
                         </div>
-                        <div>
+                        <div className="avoid-break">
                             <h4 className="text-sm font-black uppercase border-b-2 border-zinc-200 pb-2 mb-4 text-zinc-500 tracking-widest">Mapeamento de Regiões</h4>
-                            <ul className="text-sm space-y-3 font-medium text-black">
+                            <ul className="text-sm space-y-3 font-medium print-text-black">
                                 <li><b>Peitoral:</b> Supinos, Crucifixos, Flexões.</li>
                                 <li><b>Tríceps (Tchauzinho):</b> Tríceps Testa, Polia, Francesa.</li>
                                 <li><b>Costas (Subescapular):</b> Puxadas Altas, Remadas.</li>
@@ -404,16 +466,16 @@ export default function PollockPage() {
                     </div>
                 </div>
 
-                {/* PÁGINA 3: FOTOS (Blindada) */}
+                {/* PÁGINA 3: FOTOS */}
                 {(photos.frente || photos.perfil || photos.costas) && (
-                    <div className="page-break">
-                        <h3 className="text-3xl font-black text-brand uppercase border-b-2 border-brand pb-2 mb-8 tracking-tighter">Registro Fotográfico</h3>
+                    <div className="page-break avoid-break">
+                        <h3 className="text-3xl font-black uppercase border-b-2 pb-2 mb-8 tracking-tighter" style={{ color: 'var(--brand)', borderColor: 'var(--brand)' }}>Registro Fotográfico</h3>
                         <div className="grid grid-cols-3 gap-6">
                             {['frente', 'perfil', 'costas'].map(pose => (
                                 photos[pose as keyof typeof photos] ? (
-                                    <div key={pose} className="flex flex-col items-center avoid-break">
-                                        <img src={photos[pose as keyof typeof photos]!} className="w-full max-h-[500px] object-contain rounded-2xl border-4 border-zinc-100 shadow-sm" />
-                                        <p className="text-sm font-black text-brand uppercase mt-4 tracking-widest">{pose}</p>
+                                    <div key={pose} className="print-photo-container">
+                                        <img src={photos[pose as keyof typeof photos]!} className="print-photo" />
+                                        <p className="text-sm font-black uppercase mt-4 tracking-widest" style={{ color: 'var(--brand)' }}>{pose}</p>
                                     </div>
                                 ) : null
                             ))}
@@ -421,8 +483,8 @@ export default function PollockPage() {
                         
                         <div className="mt-20 pt-8 border-t-2 border-zinc-200 flex justify-between items-end opacity-80 avoid-break">
                             <div>
-                                <div className="h-1 bg-brand w-48 mb-3 rounded-full"></div>
-                                <p className="text-xs font-black uppercase tracking-widest text-black">Treinador Responsável</p>
+                                <div className="h-1 w-48 mb-3 rounded-full" style={{ backgroundColor: 'var(--brand)' }}></div>
+                                <p className="text-xs font-black uppercase tracking-widest print-text-black">Treinador Responsável</p>
                             </div>
                             <p className="text-[10px] font-black italic text-zinc-400">GERADO VIA COACHPRO SYSTEM</p>
                         </div>

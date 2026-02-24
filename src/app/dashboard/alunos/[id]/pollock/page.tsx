@@ -36,6 +36,19 @@ export default function PollockPage() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const [results, setResults] = useState<{ bf: number, fatMass: number, leanMass: number } | null>(null);
 
+  // --- RASTREADOR DINÂMICO DE TEMA (VERDE/ROXO) ---
+  const [brandColor, setBrandColor] = useState<string>('#84cc16'); // Verde padrão
+  const colorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+      if (colorRef.current) {
+          const color = window.getComputedStyle(colorRef.current).backgroundColor;
+          if (color && color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent') {
+              setBrandColor(color);
+          }
+      }
+  }, []);
+
   // --- AUTO-SAVE OFFLINE ---
   useEffect(() => {
     const savedData = localStorage.getItem(`pollock_draft_${studentId}`);
@@ -61,7 +74,7 @@ export default function PollockPage() {
       localStorage.setItem(`pollock_draft_${studentId}`, JSON.stringify({ folds, circs, weight, age }));
   }, [folds, circs, weight, age, studentId]);
 
-  // --- MICROFONE INTELIGENTE (CORTA SOZINHO NO SILÊNCIO) ---
+  // --- MICROFONE INTELIGENTE (CORTA NO SILÊNCIO) ---
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -204,45 +217,26 @@ export default function PollockPage() {
   return (
     <div className="min-h-screen bg-black text-white pb-20 relative">
         
-                {/* CSS DE IMPRESSÃO BLINDADO (FIM DA TELA BRANCA NO IOS) */}
+        {/* SONDA INVISÍVEL PARA LER O TEMA ATUAL (VERDE OU ROXO) */}
+        <div ref={colorRef} className="bg-brand hidden" aria-hidden="true"></div>
+
+        {/* --- CSS DE IMPRESSÃO BLINDADO (iOS SAFE) --- */}
         <style jsx global>{`
             @media print {
-                /* 1. REMOVIDO o visibility:hidden e position:absolute que apagavam o PDF no iPhone */
-                @page { margin: 5mm 10mm; }
-                body { 
-                    background-color: white !important; 
-                    -webkit-print-color-adjust: exact !important; 
-                    print-color-adjust: exact !important; 
-                }
+                body { background-color: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                 
-                /* 2. Cores forçadas pro iOS não deixar tudo branco/cinza */
-                .print-bg-brand { 
-                    background-color: var(--brand) !important;
-                    box-shadow: inset 0 0 0 1000px var(--brand) !important; 
-                }
-                .print-bg-zinc { 
-                    background-color: #f4f4f5 !important;
-                    box-shadow: inset 0 0 0 1000px #f4f4f5 !important; 
-                }
-                .print-text-black { color: black !important; }
+                /* Quebras de página seguras */
+                .page-break { page-break-before: always; break-before: page; margin-top: 10mm; }
+                .page-break:first-child { page-break-before: avoid; break-before: avoid; margin-top: 0; }
                 
-                /* 3. Quebras de página seguras e anti-corte de texto */
-                .page-break { break-before: page; page-break-before: always; padding-top: 10mm; }
-                /* A primeira página não deve ter quebra antes dela, senão gera uma folha extra em branco */
-                .page-break:first-child { break-before: auto; page-break-before: auto; padding-top: 0; }
+                /* Impede que blocos e grids sejam cortados ao meio */
+                .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; display: block; width: 100%; }
                 
-                /* Impede que blocos de texto ou grids sejam fatiados no meio */
-                .avoid-break { break-inside: avoid !important; page-break-inside: avoid !important; display: block; width: 100%; }
-                
-                /* 4. Limita fotos pra não vazarem de página e cortarem a cabeça/pé do aluno */
-                .print-photo-container { break-inside: avoid !important; page-break-inside: avoid !important; text-align: center; margin-bottom: 10mm;}
-                .print-photo { max-height: 35vh !important; width: auto !important; object-fit: contain !important; border-radius: 8px !important; margin: 0 auto; }
+                /* Formatação segura das fotos */
+                .print-photo-container { page-break-inside: avoid !important; break-inside: avoid !important; text-align: center; margin-bottom: 5mm;}
+                .print-photo { max-height: 38vh !important; width: auto !important; object-fit: contain !important; border-radius: 8px !important; margin: 0 auto; box-shadow: 0 0 0 1px #e4e4e7; }
             }
-            
-            /* Mantém a área de impressão invisível enquanto navega no site normal */
-            #print-area { display: none; }
         `}</style>
-
 
         {/* --- INTERFACE DO APLICATIVO (ESCONDIDA NA IMPRESSÃO) --- */}
         <div className="print:hidden">
@@ -376,85 +370,85 @@ export default function PollockPage() {
                 
                 {/* PÁGINA 1: DADOS E TABELAS */}
                 <div className="avoid-break mb-10">
-                    <div className="border-b-2 pb-4 mb-8 flex justify-between items-end" style={{ borderColor: 'var(--brand)' }}>
+                    <div className="border-b-2 pb-4 mb-8 flex justify-between items-end" style={{ borderColor: brandColor }}>
                         <div>
-                            <h1 className="text-4xl font-black uppercase tracking-tighter" style={{ color: 'var(--brand)' }}>Avaliação Física</h1>
+                            <h1 className="text-4xl font-black uppercase tracking-tighter" style={{ color: brandColor }}>Avaliação Física</h1>
                             <p className="text-xs font-bold uppercase text-zinc-600 mt-1">Protocolo: Jackson & Pollock (7 Dobras)</p>
                         </div>
                         <div className="text-right">
                             <p className="text-xs font-bold uppercase text-zinc-500">Atleta</p>
-                            <p className="text-lg font-black print-text-black">{student.full_name}</p>
+                            <p className="text-lg font-black text-black">{student.full_name}</p>
                             <p className="text-[10px] font-bold text-zinc-500 mt-1">Avaliador: Paulo Adriano TEAM</p>
                             <p className="text-[10px] font-bold text-zinc-500">{new Date().toLocaleDateString('pt-BR')}</p>
                         </div>
                     </div>
 
-                    {/* Gráfico Visual Dinâmico (Vetor inquebrável) */}
+                    {/* Gráfico Visual Dinâmico Forçado */}
                     <div className="mb-8 avoid-break">
                         <div className="flex justify-between mb-2">
                             <span className="text-[10px] uppercase font-black text-zinc-600">Massa Magra ({results.leanMass.toFixed(1)}kg)</span>
-                            <span className="text-[10px] uppercase font-black" style={{ color: 'var(--brand)' }}>Gordura ({results.fatMass.toFixed(1)}kg)</span>
+                            <span className="text-[10px] uppercase font-black" style={{ color: brandColor }}>Gordura ({results.fatMass.toFixed(1)}kg)</span>
                         </div>
-                        <div className="h-5 w-full rounded-full overflow-hidden relative bg-zinc-100 border border-zinc-200">
-                            {/* SVG obriga o Safari a imprimir as cores do Tema escolhido */}
+                        <div className="h-5 w-full rounded-full overflow-hidden relative border border-zinc-300" style={{ backgroundColor: '#f4f4f5' }}>
+                            {/* O SVG injeta a cor exata do Tema para o Safari imprimir */}
                             <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
                                 <rect x="0" y="0" width={`${100 - results.bf}%`} height="100%" fill="#f4f4f5" />
-                                <rect x={`${100 - results.bf}%`} y="0" width={`${results.bf}%`} height="100%" fill="var(--brand)" />
+                                <rect x={`${100 - results.bf}%`} y="0" width={`${results.bf}%`} height="100%" fill={brandColor} />
                             </svg>
                         </div>
                     </div>
 
-                    {/* Caixinhas Resumo Clean */}
+                    {/* Caixinhas Resumo com HACK de Box-Shadow (Força o iOS a pintar o fundo) */}
                     <div className="grid grid-cols-4 gap-4 mb-10">
-                        <div className="print-bg-zinc p-3 rounded-xl border border-zinc-200 text-center">
+                        <div className="p-3 rounded-lg text-center" style={{ boxShadow: 'inset 0 0 0 1000px #f4f4f5', border: '1px solid #e4e4e7' }}>
                             <p className="text-[9px] uppercase font-black text-zinc-500">Peso Total</p>
-                            <p className="text-xl font-black print-text-black">{weight} kg</p>
+                            <p className="text-xl font-black text-black">{weight} kg</p>
                         </div>
-                        <div className="print-bg-brand p-3 rounded-xl text-center">
-                            <p className="text-[9px] uppercase font-black print-text-black">Gordura (BF)</p>
-                            <p className="text-xl font-black print-text-black">{results.bf.toFixed(1)} %</p>
+                        <div className="p-3 rounded-lg text-center" style={{ boxShadow: `inset 0 0 0 1000px ${brandColor}`, border: `1px solid ${brandColor}` }}>
+                            <p className="text-[9px] uppercase font-black text-black">Gordura (BF)</p>
+                            <p className="text-xl font-black text-black">{results.bf.toFixed(1)} %</p>
                         </div>
-                        <div className="print-bg-zinc p-3 rounded-xl border border-zinc-200 text-center">
+                        <div className="p-3 rounded-lg text-center" style={{ boxShadow: 'inset 0 0 0 1000px #f4f4f5', border: '1px solid #e4e4e7' }}>
                             <p className="text-[9px] uppercase font-black text-zinc-500">Massa Magra</p>
-                            <p className="text-xl font-black print-text-black">{results.leanMass.toFixed(1)} kg</p>
+                            <p className="text-xl font-black text-black">{results.leanMass.toFixed(1)} kg</p>
                         </div>
-                        <div className="print-bg-zinc p-3 rounded-xl border border-zinc-200 text-center">
+                        <div className="p-3 rounded-lg text-center" style={{ boxShadow: 'inset 0 0 0 1000px #f4f4f5', border: '1px solid #e4e4e7' }}>
                             <p className="text-[9px] uppercase font-black text-zinc-500">Massa Gorda</p>
-                            <p className="text-xl font-black print-text-black">{results.fatMass.toFixed(1)} kg</p>
+                            <p className="text-xl font-black text-black">{results.fatMass.toFixed(1)} kg</p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-10 mb-8">
                         <div>
-                            <h3 className="text-xs font-black uppercase border-b-2 pb-2 mb-4 tracking-widest" style={{ color: 'var(--brand)', borderColor: '#e4e4e7' }}>Dobras Cutâneas (mm)</h3>
+                            <h3 className="text-xs font-black uppercase border-b-2 pb-2 mb-4 tracking-widest" style={{ color: brandColor, borderColor: '#e4e4e7' }}>Dobras Cutâneas (mm)</h3>
                             {FOLD_KEYS.map(k => (
                                 <div key={k} className="flex justify-between border-b border-zinc-100 py-1.5">
                                     <span className="text-[10px] uppercase font-bold text-zinc-600">{formatName(k)}</span>
-                                    <span className="text-xs font-black print-text-black">{folds[k as keyof Folds] || '--'}</span>
+                                    <span className="text-xs font-black text-black">{folds[k as keyof Folds] || '--'}</span>
                                 </div>
                             ))}
                         </div>
                         <div>
-                            <h3 className="text-xs font-black uppercase border-b-2 pb-2 mb-4 tracking-widest" style={{ color: 'var(--brand)', borderColor: '#e4e4e7' }}>Perímetros (cm)</h3>
+                            <h3 className="text-xs font-black uppercase border-b-2 pb-2 mb-4 tracking-widest" style={{ color: brandColor, borderColor: '#e4e4e7' }}>Perímetros (cm)</h3>
                             {CIRC_KEYS.map(k => (
                                 <div key={k} className="flex justify-between border-b border-zinc-100 py-1.5">
                                     <span className="text-[10px] uppercase font-bold text-zinc-600">{formatName(k)}</span>
-                                    <span className="text-xs font-black print-text-black">{circs[k as keyof Circs] || '--'}</span>
+                                    <span className="text-xs font-black text-black">{circs[k as keyof Circs] || '--'}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
 
-                {/* PÁGINA 2: GUIA DE DEFINIÇÃO E HIPERTROFIA */}
+                {/* PÁGINA 2: GUIA DE DEFINIÇÃO (Não Corta) */}
                 <div className="page-break avoid-break">
-                    <h3 className="text-3xl font-black uppercase border-b-2 pb-2 mb-8 tracking-tighter" style={{ color: 'var(--brand)', borderColor: 'var(--brand)' }}>
+                    <h3 className="text-2xl font-black uppercase border-b-2 pb-2 mb-8 tracking-tighter" style={{ color: brandColor, borderColor: brandColor }}>
                         Guia de Hipertrofia e Definição
                     </h3>
                     
                     <div className="border border-zinc-300 p-6 rounded-2xl mb-8 bg-zinc-50">
-                        <p className="text-lg font-black uppercase mb-3 flex items-center gap-2" style={{ color: 'var(--brand)' }}>⚠️ Atenção à Regra de Ouro</p>
-                        <p className="text-base print-text-black leading-relaxed text-justify font-medium">
+                        <p className="text-lg font-black uppercase mb-3 flex items-center gap-2" style={{ color: brandColor }}>⚠️ Atenção à Regra de Ouro</p>
+                        <p className="text-base text-black leading-relaxed text-justify font-medium">
                             Exercício direcionado (ex: abdominal) gera <b>hipertrofia</b> do músculo local, mas <b>NÃO</b> queima a gordura daquela região específica. 
                             Para o músculo ficar visível ("definido"), é obrigatório reduzir a camada de gordura (dobra cutânea) através de <b>Déficit Calórico, Dieta alinhada e Cardio em dia</b>.
                         </p>
@@ -463,15 +457,15 @@ export default function PollockPage() {
                     <div className="grid grid-cols-2 gap-8 mb-6">
                         <div className="avoid-break">
                             <h4 className="text-sm font-black uppercase border-b-2 border-zinc-200 pb-2 mb-4 text-zinc-500 tracking-widest">Alvo de Definição Visível</h4>
-                            <ul className="text-sm space-y-4 font-medium print-text-black">
-                                <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--brand)' }}></div> <b>Homens:</b> Dobras abaixo de 8 a 10mm.</li>
-                                <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--brand)' }}></div> <b>Mulheres:</b> Dobras abaixo de 12 a 15mm.</li>
+                            <ul className="text-sm space-y-4 font-medium text-black">
+                                <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: brandColor }}></div> <b>Homens:</b> Dobras abaixo de 8 a 10mm.</li>
+                                <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: brandColor }}></div> <b>Mulheres:</b> Dobras abaixo de 12 a 15mm.</li>
                                 <li className="text-[10px] text-zinc-500 italic mt-2">* Variações ocorrem por genética e hidratação.</li>
                             </ul>
                         </div>
                         <div className="avoid-break">
                             <h4 className="text-sm font-black uppercase border-b-2 border-zinc-200 pb-2 mb-4 text-zinc-500 tracking-widest">Mapeamento de Regiões</h4>
-                            <ul className="text-sm space-y-3 font-medium print-text-black">
+                            <ul className="text-sm space-y-3 font-medium text-black">
                                 <li><b>Peitoral:</b> Supinos, Crucifixos, Flexões.</li>
                                 <li><b>Tríceps (Tchauzinho):</b> Tríceps Testa, Polia, Francesa.</li>
                                 <li><b>Costas (Subescapular):</b> Puxadas Altas, Remadas.</li>
@@ -482,27 +476,29 @@ export default function PollockPage() {
                     </div>
                 </div>
 
-                {/* PÁGINA 3: FOTOS */}
+                {/* PÁGINA 3: FOTOS (Não vaza da folha) */}
                 {(photos.frente || photos.perfil || photos.costas) && (
                     <div className="page-break avoid-break">
-                        <h3 className="text-3xl font-black uppercase border-b-2 pb-2 mb-8 tracking-tighter" style={{ color: 'var(--brand)', borderColor: 'var(--brand)' }}>Registro Fotográfico</h3>
+                        <h3 className="text-2xl font-black uppercase border-b-2 pb-2 mb-8 tracking-tighter" style={{ color: brandColor, borderColor: brandColor }}>
+                            Registro Fotográfico
+                        </h3>
                         <div className="grid grid-cols-3 gap-6">
                             {['frente', 'perfil', 'costas'].map(pose => (
                                 photos[pose as keyof typeof photos] ? (
                                     <div key={pose} className="print-photo-container">
                                         <img src={photos[pose as keyof typeof photos]!} className="print-photo" />
-                                        <p className="text-sm font-black uppercase mt-4 tracking-widest" style={{ color: 'var(--brand)' }}>{pose}</p>
+                                        <p className="text-sm font-black uppercase mt-4 tracking-widest" style={{ color: brandColor }}>{pose}</p>
                                     </div>
                                 ) : null
                             ))}
                         </div>
                         
-                        <div className="mt-20 pt-8 border-t-2 border-zinc-200 flex justify-between items-end opacity-80 avoid-break">
+                        <div className="mt-20 pt-8 border-t border-zinc-300 flex justify-between items-end opacity-80 avoid-break">
                             <div>
-                                <div className="h-1 w-48 mb-3 rounded-full" style={{ backgroundColor: 'var(--brand)' }}></div>
-                                <p className="text-xs font-black uppercase tracking-widest print-text-black">Treinador Responsável</p>
+                                <div className="h-1 w-48 mb-3 rounded-full" style={{ backgroundColor: brandColor }}></div>
+                                <p className="text-xs font-black uppercase tracking-widest text-black">Treinador Responsável</p>
                             </div>
-                            <p className="text-[10px] font-black italic text-zinc-400">GERADO VIA COACHPRO SYSTEM</p>
+                            <p className="text-[10px] font-black italic text-zinc-500">GERADO VIA COACHPRO SYSTEM</p>
                         </div>
                     </div>
                 )}

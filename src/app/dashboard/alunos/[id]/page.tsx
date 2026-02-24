@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase";
 import { 
   ArrowLeft, Weight, TrendingDown, Calendar, 
   Image as ImageIcon, Plus, Sparkles, Activity, 
-  ClipboardList, ScanEye, BrainCircuit, Printer
+  ClipboardList, ScanEye, BrainCircuit, Printer,
+  ActivitySquare
 } from "lucide-react";
 import Link from "next/link";
 import PhotoComparator from "@/components/PhotoComparator";
@@ -169,7 +170,8 @@ export default function AlunoDetalhesPage() {
                 </Link>
                 <h1 className="text-2xl font-black italic tracking-tighter uppercase">{student.full_name}</h1>
             </div>
-            {/* Botões de Ação: Grid de 2 no mobile, Flex no desktop */}
+            
+            {/* Botões de Ação: Grid perfeito de 2x2 no mobile, Flex no desktop */}
             <div className="grid grid-cols-2 md:flex gap-3 w-full md:w-auto">
                  <Link href={`/dashboard/alunos/${studentId}/diagnostico`} className="bg-zinc-900 text-blue-400 border border-zinc-800 px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
                     <ScanEye size={16} /> Raio-X
@@ -177,7 +179,10 @@ export default function AlunoDetalhesPage() {
                  <Link href={`/dashboard/alunos/${studentId}/comparativo`} className="bg-zinc-900 text-brand border border-zinc-800 px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
                     <Sparkles size={16} /> IA 4.0
                  </Link>
-                 <Link href={`/dashboard/alunos/${studentId}/novo-checkin`} className="bg-brand text-black px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 col-span-2 md:col-span-1">
+                 <Link href={`/dashboard/alunos/${studentId}/pollock`} className="bg-zinc-900 text-amber-400 border border-zinc-800 px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
+                    <ActivitySquare size={16} /> Pollock
+                 </Link>
+                 <Link href={`/dashboard/alunos/${studentId}/novo-checkin`} className="bg-brand text-black px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
                     <Plus size={16} /> Novo Check-in
                  </Link>
             </div>

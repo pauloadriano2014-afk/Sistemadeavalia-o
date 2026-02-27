@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase";
+import { flushSync } from "react-dom";
 import { 
   ArrowLeft, Weight, TrendingDown, Calendar, 
   Image as ImageIcon, Plus, Sparkles, ActivitySquare, Printer, BrainCircuit, ClipboardList, ScanEye,
@@ -11,7 +12,6 @@ import PhotoComparator from "@/components/PhotoComparator";
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 
-// Helpers para o Pollock
 type Folds = { peitoral: number|''; axilar_media: number|''; triceps: number|''; subescapular: number|''; abdomen: number|''; suprailiaca: number|''; coxa: number|''; };
 type Circs = { torax: number|''; cintura: number|''; abdomen_circ: number|''; quadril: number|''; braco_dir: number|''; braco_esq: number|''; coxa_dir: number|''; coxa_esq: number|''; panturrilha_dir: number|''; panturrilha_esq: number|''; };
 const FOLD_KEYS = ['peitoral', 'axilar_media', 'triceps', 'subescapular', 'abdomen', 'suprailiaca', 'coxa'];
@@ -77,7 +77,6 @@ export default function AlunoDetalhesPage() {
   const [timeline, setTimeline] = useState<any[]>([]);
   const [stats, setStats] = useState({ current: 0, diff: 0, count: 0, assessCount: 0 });
   
-  // ESTADOS DE IMPRESSÃO E SELEÇÃO
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [selectedAssessments, setSelectedAssessments] = useState<any[]>([]);
   const [printingCustomComparison, setPrintingCustomComparison] = useState(false);
@@ -150,22 +149,26 @@ export default function AlunoDetalhesPage() {
         });
     }
     loadData();
-  }, [studentId]);
+  }, [studentId, supabase]);
 
-  // FUNÇÕES DE IMPRESSÃO
   const handlePrint = (id: string) => {
-    setPrintingId(id);
-    setPrintingCustomComparison(false);
-    setTimeout(() => { window.print(); setPrintingId(null); }, 300);
+    flushSync(() => {
+        setPrintingId(id);
+        setPrintingCustomComparison(false);
+    });
+    window.print();
+    setTimeout(() => setPrintingId(null), 500);
   };
 
   const handlePrintCustomComparison = () => {
-    setPrintingCustomComparison(true);
-    setPrintingId(null);
-    setTimeout(() => { window.print(); setPrintingCustomComparison(false); }, 300);
+    flushSync(() => {
+        setPrintingCustomComparison(true);
+        setPrintingId(null);
+    });
+    window.print();
+    setTimeout(() => setPrintingCustomComparison(false), 500);
   };
 
-  // FUNÇÃO DE SELEÇÃO MÚLTIPLA
   const toggleSelection = (pollock: any) => {
       const isSelected = selectedAssessments.some(p => p.id === pollock.id);
       if (isSelected) {
@@ -179,7 +182,6 @@ export default function AlunoDetalhesPage() {
       }
   };
 
-  // CÉREBRO ANALÍTICO DE FEEDBACK
   const generateSmartFeedback = (oldest: any, newest: any) => {
       const deltaWeight = newest.weight - oldest.weight;
       const deltaBF = newest.bf_percentage - oldest.bf_percentage;
@@ -258,26 +260,24 @@ export default function AlunoDetalhesPage() {
         }
       `}</style>
 
-      {/* --- BARRA FLUTUANTE DE GERAÇÃO DO COMPARATIVO MÚLTIPLO (PWA SAFE) --- */}
-      {selectedAssessments.length >= 2 && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900 border border-brand p-4 rounded-full flex items-center gap-6 shadow-2xl z-50 animate-in slide-in-from-bottom-10 print:hidden w-[90%] md:w-auto justify-between pb-safe">
-              <div className="flex flex-col">
-                  <span className="text-white font-black text-sm">{selectedAssessments.length} Avaliações</span>
-                  <span className="text-brand text-[10px] font-bold uppercase tracking-widest">Prontas para comparação</span>
-              </div>
-              <div className="flex items-center gap-2">
-                  <button onClick={handlePrintCustomComparison} className="bg-brand text-black px-4 py-2 md:px-6 md:py-3 rounded-full font-black uppercase text-[10px] md:text-xs hover:scale-105 transition-transform flex items-center gap-2">
-                      <Printer size={16} /> Relatório
-                  </button>
-                  <button onClick={() => setSelectedAssessments([])} className="text-zinc-500 hover:text-white p-2 bg-black rounded-full border border-zinc-800">
-                      <X size={20} />
-                  </button>
-              </div>
-          </div>
-      )}
-
-      {/* --- SITE TELA --- */}
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 print:hidden">
+        {selectedAssessments.length >= 2 && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900 border border-brand p-4 rounded-full flex items-center gap-6 shadow-2xl z-50 animate-in slide-in-from-bottom-10 print:hidden w-[90%] md:w-auto justify-between pb-safe">
+                <div className="flex flex-col">
+                    <span className="text-white font-black text-sm">{selectedAssessments.length} Avaliações</span>
+                    <span className="text-brand text-[10px] font-bold uppercase tracking-widest">Prontas para comparação</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={handlePrintCustomComparison} className="bg-brand text-black px-4 py-2 md:px-6 md:py-3 rounded-full font-black uppercase text-[10px] md:text-xs hover:scale-105 transition-transform flex items-center gap-2">
+                        <Printer size={16} /> Relatório
+                    </button>
+                    <button onClick={() => setSelectedAssessments([])} className="text-zinc-500 hover:text-white p-2 bg-black rounded-full border border-zinc-800">
+                        <X size={20} />
+                    </button>
+                </div>
+            </div>
+        )}
+
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-zinc-900 pb-6 gap-4">
             <div className="flex items-center gap-4">
                 <Link href="/dashboard/alunos" className="p-2 text-zinc-500 hover:text-brand transition-colors">
@@ -355,7 +355,6 @@ export default function AlunoDetalhesPage() {
                                             <Printer size={14} /> PDF
                                         </button>
                                         
-                                        {/* CHECKBOX DE SELEÇÃO MÚLTIPLA */}
                                         <button 
                                             onClick={() => toggleSelection(item)} 
                                             className={`px-3 py-2 rounded-lg transition-colors border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${
@@ -398,10 +397,8 @@ export default function AlunoDetalhesPage() {
         </div>
       </div>
 
-      {/* --- ÁREA DE IMPRESSÃO (PDF INVISÍVEL NO SITE) --- */}
       <div className="hidden print:block w-full bg-white text-black font-sans p-8">
         
-        {/* RENDER DO COMPARATIVO CUSTOMIZADO (MÚLTIPLAS COLUNAS E FOTOS LADO A LADO) */}
         {printingCustomComparison && selectedAssessments.length >= 2 && (() => {
             const sortedSelected = [...selectedAssessments].sort((a, b) => a.date.getTime() - b.date.getTime());
             const oldest = sortedSelected[0];
@@ -424,7 +421,6 @@ export default function AlunoDetalhesPage() {
                         <PrintHeader date={`${dateOldStr} → ${dateNewStr}`} title="Avaliação Comparativa" />
                         
                         <div className="grid grid-cols-4 gap-4 mb-10">
-                            {/* PESO */}
                             <div className="p-3 rounded-lg text-center border border-zinc-300" style={{ backgroundColor: '#f4f4f5', boxShadow: 'inset 0 0 0 1000px #f4f4f5' }}>
                                 <p className="text-[9px] uppercase font-black text-zinc-500">Peso Atual</p>
                                 <p className="text-xl font-black text-black mb-1">{newest.weight} kg</p>
@@ -432,7 +428,6 @@ export default function AlunoDetalhesPage() {
                                     {totalDiffWeight > 0 ? '+' : ''}{totalDiffWeight.toFixed(1)}kg
                                 </p>
                             </div>
-                            {/* BF */}
                             <div className="p-3 rounded-lg text-center border border-zinc-300" style={{ backgroundColor: '#f4f4f5', boxShadow: 'inset 0 0 0 1000px #f4f4f5' }}>
                                 <p className="text-[9px] uppercase font-black text-zinc-500">Gordura (BF)</p>
                                 <p className="text-xl font-black text-black mb-1">{newest.bf_percentage.toFixed(1)} %</p>
@@ -440,7 +435,6 @@ export default function AlunoDetalhesPage() {
                                     {totalDiffBF > 0 ? '+' : ''}{totalDiffBF.toFixed(1)}%
                                 </p>
                             </div>
-                            {/* MASSA MAGRA */}
                             <div className="p-3 rounded-lg text-center border border-zinc-300" style={{ backgroundColor: '#f4f4f5', boxShadow: 'inset 0 0 0 1000px #f4f4f5' }}>
                                 <p className="text-[9px] uppercase font-black text-zinc-500">Massa Magra</p>
                                 <p className="text-xl font-black text-black mb-1">{newest.lean_mass.toFixed(1)} kg</p>
@@ -448,7 +442,6 @@ export default function AlunoDetalhesPage() {
                                     {totalDiffLean > 0 ? '+' : ''}{totalDiffLean.toFixed(1)}kg
                                 </p>
                             </div>
-                            {/* MASSA GORDA */}
                             <div className="p-3 rounded-lg text-center border border-zinc-300" style={{ backgroundColor: '#f4f4f5', boxShadow: 'inset 0 0 0 1000px #f4f4f5' }}>
                                 <p className="text-[9px] uppercase font-black text-zinc-500">Massa Gorda</p>
                                 <p className="text-xl font-black text-black mb-1">{newest.fat_mass.toFixed(1)} kg</p>
@@ -459,7 +452,6 @@ export default function AlunoDetalhesPage() {
                         </div>
 
                         <div className={`grid ${hasCircs ? 'grid-cols-2' : 'grid-cols-1'} gap-10 mb-8`}>
-                            {/* TABELA DOBRAS DINÂMICA (2 ou 3 colunas) */}
                             <div>
                                 <h3 className="text-xs font-black uppercase border-b-2 pb-2 mb-4 tracking-widest" style={{ color: brandColor, borderColor: brandColor }}>Dobras Cutâneas (mm)</h3>
                                 <table className="comp-table">
@@ -489,7 +481,6 @@ export default function AlunoDetalhesPage() {
                                 </table>
                             </div>
 
-                            {/* TABELA PERÍMETROS DINÂMICA */}
                             {hasCircs && (
                                 <div>
                                     <h3 className="text-xs font-black uppercase border-b-2 pb-2 mb-4 tracking-widest" style={{ color: brandColor, borderColor: brandColor }}>Perímetros (cm)</h3>
@@ -520,7 +511,6 @@ export default function AlunoDetalhesPage() {
                             )}
                         </div>
 
-                        {/* VEREDITO TÉCNICO INTELIGENTE COM IA NATIVA */}
                         <div className="border-l-4 p-5 mt-8 bg-zinc-50" style={{ borderColor: brandColor, boxShadow: 'inset 0 0 0 1000px #f8fafc' }}>
                             <p className="text-sm font-black uppercase mb-2 flex items-center gap-2" style={{ color: brandColor }}>
                                 <BrainCircuit size={16} /> Parecer Técnico Automático
@@ -529,7 +519,6 @@ export default function AlunoDetalhesPage() {
                         </div>
                     </div>
 
-                    {/* NOVA PÁGINA: EVOLUÇÃO VISUAL LADO A LADO */}
                     {hasPhotos && (
                         <div className="page-break avoid-break mt-10">
                             <h3 className="text-xl font-black uppercase border-b-2 pb-1 mb-8 tracking-tighter" style={{ color: brandColor, borderColor: brandColor }}>
@@ -544,7 +533,6 @@ export default function AlunoDetalhesPage() {
                                         <div key={pose} className="avoid-break">
                                             <h4 className="text-xs font-black uppercase mb-3 text-zinc-500 tracking-widest text-center border-b border-zinc-100 pb-1">{pose}</h4>
                                             
-                                            {/* Grid dinâmico construído via inline-style para segurança no Tailwind e no iOS */}
                                             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${sortedSelected.length}, minmax(0, 1fr))`, gap: '16px' }}>
                                                 {sortedSelected.map(p => (
                                                     <div key={p.id} className="flex flex-col items-center">
@@ -577,7 +565,6 @@ export default function AlunoDetalhesPage() {
             );
         })()}
 
-        {/* RENDER DO PDF INDIVIDUAL PADRÃO (IA ou POLLOCK ÚNICO) */}
         {!printingCustomComparison && printingId && timeline.map((item: any) => {
             if (item.id !== printingId) return null;
 
